@@ -21,6 +21,9 @@ import SettingsStore from "../settings/SettingsStore";
 import PlatformPeg from "../PlatformPeg";
 import SdkConfig from "../SdkConfig";
 import { setTheme } from "../theme";
+import { _t } from "../languageHandler";
+import { getBrand } from "../branding";
+import { extractErrorMessageFromError } from "../components/views/dialogs/ErrorDialog";
 import type MatrixChat from "../components/structures/MatrixChat";
 import ElectronPlatform from "./platform/ElectronPlatform";
 import PWAPlatform from "./platform/PWAPlatform";
@@ -148,6 +151,33 @@ export async function showError(title: string, messages?: string[]): Promise<voi
     );
 }
 
+/**
+ * Show the error page for a config file which is not valid JSON.
+ *
+ * @param error - The error from parsing the config file.
+ */
+export async function showConfigSyntaxError(error: SyntaxError): Promise<void> {
+    // The config could not be loaded, so this names the default brand.
+    const brand = getBrand();
+    return showError(_t("auth|misconfigured_title", { brand }), [
+        _t("error|invalid_json", { brand }),
+        _t("error|invalid_json_detail", {
+            message: error.message || _t("error|invalid_json_generic"),
+        }),
+    ]);
+}
+
+/**
+ * Show the error page for an error which stopped the app from starting.
+ *
+ * @param error - The error which was thrown.
+ */
+export async function showAppLaunchError(error: unknown): Promise<void> {
+    return showError(_t("auth|misconfigured_title", { brand: getBrand() }), [
+        extractErrorMessageFromError(error, _t("error|app_launch_unexpected_error")),
+    ]);
+}
+
 export async function showIncompatibleBrowser(onAccept: () => void): Promise<void> {
     const { UnsupportedBrowserView } = await import(
         /* webpackChunkName: "error-view" */
@@ -178,6 +208,4 @@ export async function loadPlugins(): Promise<void> {
     await moduleLoader.start();
 }
 
-export { _t } from "../languageHandler";
-
-export { extractErrorMessageFromError } from "../components/views/dialogs/ErrorDialog";
+export { _t };

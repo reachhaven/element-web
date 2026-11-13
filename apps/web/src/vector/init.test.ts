@@ -14,7 +14,14 @@ import fetchMock from "@fetch-mock/vitest";
 import { waitFor, screen } from "test-utils-rtl";
 import { mockPlatformPeg, unmockPlatformPeg } from "test-utils/platform.ts";
 
-import { loadApp, logAppVersion, showError, showIncompatibleBrowser } from "./init.tsx";
+import {
+    loadApp,
+    logAppVersion,
+    showAppLaunchError,
+    showConfigSyntaxError,
+    showError,
+    showIncompatibleBrowser,
+} from "./init.tsx";
 import SdkConfig from "../SdkConfig.ts";
 import MatrixChat from "../components/structures/MatrixChat.tsx";
 import { parseAppUrl } from "./url_utils.ts";
@@ -43,6 +50,52 @@ describe("showError", () => {
         await showError("Error title", ["msg1", "msg2"]);
         await screen.findByText("Error title");
         expect(document.getElementById("matrixchat")).toMatchSnapshot();
+    });
+});
+
+describe("showConfigSyntaxError", () => {
+    beforeEach(setUpMatrixChatDiv);
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it("should name the default brand, as the config could not be loaded", async () => {
+        // SdkConfig returns an empty object until a config has been put
+        vi.spyOn(SdkConfig, "get").mockReturnValue({});
+        await showConfigSyntaxError(new SyntaxError("Unexpected end of JSON input"));
+
+        expect(await screen.findByText("Your Element is misconfigured")).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                "Your Element configuration contains invalid JSON. Please correct the problem and reload the page.",
+            ),
+        ).toBeInTheDocument();
+        expect(screen.getByText("The message from the parser is: Unexpected end of JSON input")).toBeInTheDocument();
+    });
+});
+
+describe("showAppLaunchError", () => {
+    beforeEach(setUpMatrixChatDiv);
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        SdkConfig.reset();
+    });
+
+    it("should name the brand from the config", async () => {
+        SdkConfig.put({ brand: "Acme Chat" });
+        await showAppLaunchError(new Error("A module failed to load"));
+
+        expect(await screen.findByText("Your Acme Chat is misconfigured")).toBeInTheDocument();
+        expect(screen.getByText("A module failed to load")).toBeInTheDocument();
+    });
+
+    it("should name the default brand if the config has not loaded", async () => {
+        vi.spyOn(SdkConfig, "get").mockReturnValue({});
+        await showAppLaunchError(new Error("The platform failed to start"));
+
+        expect(await screen.findByText("Your Element is misconfigured")).toBeInTheDocument();
     });
 });
 
