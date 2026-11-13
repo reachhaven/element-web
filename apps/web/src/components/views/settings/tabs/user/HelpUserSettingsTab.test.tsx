@@ -8,12 +8,13 @@ Please see LICENSE in the repository root for full details.
 // @vitest-environment happy-dom
 
 import React from "react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, within } from "test-utils-rtl";
 import { getMockClientWithEventEmitter, mockClientMethodsUser, mockClientMethodsServer } from "test-utils";
 
 import HelpUserSettingsTab from "./HelpUserSettingsTab";
 import MatrixClientContext from "../../../../../contexts/MatrixClientContext";
+import SdkConfig from "../../../../../SdkConfig";
 import { ElementWebExtrasApi } from "../../../../../modules/ExtrasApi";
 import type { ModuleApi } from "../../../../../modules/Api";
 
@@ -34,6 +35,10 @@ describe("<HelpUserSettingsTab />", () => {
             ),
         });
 
+    afterEach(() => {
+        SdkConfig.reset();
+    });
+
     it("renders credits attributions registered by modules", () => {
         const extras = new ElementWebExtrasApi();
         extras.setCreditsAttribution("first", () => <>First module credit</>);
@@ -45,5 +50,21 @@ describe("<HelpUserSettingsTab />", () => {
         expect(items).toHaveLength(5);
         expect(items[3]).toHaveTextContent("First module credit");
         expect(items[4]).toHaveTextContent("Second module credit");
+    });
+
+    it("should link to the source code when source_code_url is set", () => {
+        SdkConfig.put({ source_code_url: "https://example.org/source" });
+        getComponent(new ElementWebExtrasApi());
+
+        expect(screen.getByRole("link", { name: "Source code of this version" })).toHaveAttribute(
+            "href",
+            "https://example.org/source",
+        );
+    });
+
+    it("should not link to the source code when source_code_url is not set", () => {
+        getComponent(new ElementWebExtrasApi());
+
+        expect(screen.queryByText("Source code of this version")).not.toBeInTheDocument();
     });
 });
