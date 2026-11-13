@@ -8,7 +8,7 @@ version = 1
 # one; the rest of the tree is upstream's, licensed as its headers and LICENSE-*
 # files say.
 [[annotations]]
-path = ["deploy/web/config.json"]
+path = ["deploy/web/config.json", "deploy/e2e/package.json", "deploy/e2e/package-lock.json", "deploy/e2e/tsconfig.json"]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 vDL Digital Ventures"
 SPDX-License-Identifier = "AGPL-3.0-only OR GPL-3.0-only"
