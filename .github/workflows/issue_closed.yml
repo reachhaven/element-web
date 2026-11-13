@@ -7,6 +7,7 @@ on:
 permissions: {} # We use ELEMENT_BOT_TOKEN instead
 jobs:
     tidy:
+        if: github.repository == 'element-hq/element-web'
         name: Tidy closed issues
         runs-on: ubuntu-26.04
         steps:

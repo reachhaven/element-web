@@ -1,0 +1,126 @@
+# SPDX-FileCopyrightText: 2026 vDL Digital Ventures
+#
+# SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+
+# Pulls upstream's develop into the fork and rebuilds staging/web (README.md,
+# "Branches"): fast-forwards develop to upstream's and pushes it, then runs
+# scripts/rebuild-staging.sh and pushes staging/web with a lease, which starts
+# the Web image workflow. A merge conflict opens or updates the issue
+# "staging/web: conflict with upstream on <branch>" and stops the run, and
+# staging/web stays as it was; the next run without a conflict closes it.
+#
+# GitHub runs a schedule only from the default branch, so config/web-image has
+# to be the default branch. The pushes need the SYNC_TOKEN secret, a
+# fine-grained personal access token for this repository with Contents and
+# Workflows read and write: GitHub refuses pushes by the default token that
+# change files in .github/workflows, and they would start no workflow. The
+# default token reads the pull requests and writes the issue.
+name: Sync upstream
+
+on:
+    schedule:
+        - cron: "17 3 * * *"
+    workflow_dispatch: {}
+
+concurrency:
+    group: ${{ github.workflow }}
+    cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+    sync:
+        name: Sync upstream
+        if: github.repository != 'element-hq/element-web' && github.ref == 'refs/heads/config/web-image'
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        permissions:
+            issues: write # the conflict issue
+            pull-requests: read # the open pull requests staging/web merges
+        defaults:
+            run:
+                shell: bash # bash --noprofile --norc -eo pipefail {0}
+        env:
+            GH_TOKEN: ${{ github.token }}
+            GH_REPO: ${{ github.repository }}
+            ISSUE_TITLE: "staging/web: conflict with upstream on "
+        steps:
+            - name: Check the repository's settings
+              env:
+                  SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+              run: |
+                  status=0
+                  if [ -z "${SYNC_TOKEN}" ]; then
+                      echo "::error::Set the SYNC_TOKEN secret: a fine-grained personal access token for this repository with Contents and Workflows read and write."
+                      status=1
+                  fi
+                  issues=$(gh api "repos/${GH_REPO}" --jq .has_issues)
+                  if [ "${issues}" != true ]; then
+                      echo "::error::Turn on issues in the repository's settings: a merge conflict is reported as an issue."
+                      status=1
+                  fi
+                  exit "${status}"
+
+            # The whole history to merge in; the token stays in git's configuration for the pushes.
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.SYNC_TOKEN }}
+                  persist-credentials: true
+
+            - name: Fast-forward develop to upstream's
+              run: |
+                  git fetch --no-tags https://github.com/element-hq/element-web.git +refs/heads/develop:refs/remotes/upstream/develop
+                  if ! git merge-base --is-ancestor origin/develop upstream/develop; then
+                      echo "::error::develop has commits that upstream's develop lacks. It only mirrors upstream: move them to a branch of their own and reset develop to upstream's."
+                      exit 1
+                  fi
+                  git push origin refs/remotes/upstream/develop:refs/heads/develop
+
+            - name: Rebuild staging/web
+              id: rebuild
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  scripts/rebuild-staging.sh --no-sign 2>&1 | tee "${RUNNER_TEMP}/rebuild.log"
+
+            - name: Push staging/web
+              if: steps.rebuild.outputs.changed == 'true'
+              env:
+                  PREVIOUS: ${{ steps.rebuild.outputs.previous }}
+              run: git push --force-with-lease="refs/heads/staging/web:${PREVIOUS}" origin staging/web
+
+            - name: Close the conflict issues
+              env:
+                  HEAD_COMMIT: ${{ steps.rebuild.outputs.head }}
+              run: |
+                  gh issue list --state open --limit 1000 --json number,title |
+                      jq -r --arg prefix "${ISSUE_TITLE}" '.[] | select(.title | startswith($prefix)) | .number' |
+                      while read -r number; do
+                          gh issue close "${number}" --comment "staging/web was rebuilt without a conflict at ${HEAD_COMMIT}."
+                      done
+
+            - name: Open or update the conflict issue
+              if: failure() && steps.rebuild.outputs.conflict != ''
+              env:
+                  BRANCH: ${{ steps.rebuild.outputs.conflict }}
+                  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+              run: |
+                  title="${ISSUE_TITLE}${BRANCH}"
+                  body="${RUNNER_TEMP}/issue.md"
+                  {
+                      echo "The [rebuild of staging/web](${RUN_URL}) stopped at \`${BRANCH}\`; staging/web and its image stay as they were."
+                      echo
+                      echo '```'
+                      cat "${RUNNER_TEMP}/rebuild.log"
+                      echo '```'
+                      echo
+                      echo "Rebase \`${BRANCH}\` as README.md, \"Branches\", describes, resolve the conflict, amend the commit, push it with \`--force-with-lease\` and run the Sync upstream workflow again. The next run without a conflict closes this issue."
+                  } > "${body}"
+                  number=$(gh issue list --state open --limit 1000 --json number,title |
+                      jq -r --arg title "${title}" 'first(.[] | select(.title == $title) | .number) // empty')
+                  if [ -n "${number}" ]; then
+                      gh issue edit "${number}" --body-file "${body}"
+                  else
+                      gh issue create --title "${title}" --body-file "${body}"
+                  fi

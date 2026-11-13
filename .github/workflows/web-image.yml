@@ -1,0 +1,108 @@
+# SPDX-FileCopyrightText: 2026 vDL Digital Ventures
+#
+# SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+
+# Builds the white-label image from staging/web (README.md, "Deployment
+# contract"): builds upstream's element_web stage from the commit tagged
+# build/<yyyymmdd>-<commit> and deploy/web/Dockerfile on top of it, checks the
+# image, pushes the tag, then pushes the image as ghcr.io/<owner>/element-web:<commit>.
+name: Web image
+
+on:
+    push:
+        branches: [staging/web]
+    workflow_dispatch: {}
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+    white-label:
+        if: github.repository != 'element-hq/element-web' && github.ref == 'refs/heads/staging/web'
+        uses: ./.github/workflows/white-label.yml
+        permissions:
+            contents: read
+        secrets:
+            WHITE_LABEL_PATTERNS: ${{ secrets.WHITE_LABEL_PATTERNS }}
+
+    image:
+        needs: white-label
+        if: github.repository != 'element-hq/element-web' && github.ref == 'refs/heads/staging/web'
+        runs-on: ubuntu-latest
+        timeout-minutes: 120
+        permissions:
+            contents: write # the build tag
+            packages: write # the image
+        steps:
+            # A clone, not a worktree: upstream's Dockerfile bind-mounts .git.
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+
+            - name: Name the image and its source
+              run: |
+                  {
+                      echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/element-web:${GITHUB_SHA}"
+                      echo "BASE_IMAGE=element-web-base:${GITHUB_SHA::12}"
+                      echo "BUILD_TAG=build/$(date -u +%Y%m%d)-${GITHUB_SHA::12}"
+                  } >> "${GITHUB_ENV}"
+
+            # On a detached HEAD, upstream's Dockerfile names the build after the tag
+            # there. Until fix/get-version-without-jq is merged into staging/web, it cannot
+            # build on a branch other than develop: its version script needs jq, which
+            # its builder lacks.
+            - name: Check out the commit at its build tag
+              run: |
+                  git tag --no-sign "${BUILD_TAG}"
+                  git checkout --detach
+
+            - name: Build upstream's element_web stage
+              run: docker build --file apps/web/Dockerfile --target element_web --tag "${BASE_IMAGE}" .
+
+            - name: Build the image
+              run: >-
+                  docker build --file deploy/web/Dockerfile
+                  --build-arg BASE_IMAGE="${BASE_IMAGE}"
+                  --build-arg SOURCE_REPOSITORY_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+                  --build-arg SOURCE_COMMIT="${GITHUB_SHA}"
+                  --label org.opencontainers.image.created="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                  --tag "${IMAGE}" deploy/web
+
+            - name: Check the deployment contract
+              run: deploy/web/test-image.sh "${IMAGE}"
+
+            - name: Tag the source of the image
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  if ! gh api "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/tags/${BUILD_TAG}" -f sha="${GITHUB_SHA}" > /dev/null; then
+                      tagged=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${BUILD_TAG}" --jq .object.sha)
+                      if [ "${tagged}" != "${GITHUB_SHA}" ]; then
+                          echo "::error::${BUILD_TAG} already names ${tagged}"
+                          exit 1
+                      fi
+                  fi
+
+            - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Push the image
+              run: docker push "${IMAGE}"
+
+            - name: Job summary
+              run: |
+                  {
+                      echo "### Web image"
+                      echo
+                      echo "Image: \`${IMAGE}\`"
+                      echo
+                      echo "Digest: \`$(docker image inspect --format '{{index .RepoDigests 0}}' "${IMAGE}")\`"
+                      echo
+                      echo "Source: \`${BUILD_TAG}\`"
+                  } >> "${GITHUB_STEP_SUMMARY}"

@@ -17,6 +17,7 @@ env:
 
 jobs:
     docker:
+        if: github.repository == 'element-hq/element-web'
         name: Docker Bake
         runs-on: ubuntu-26.04
         permissions:

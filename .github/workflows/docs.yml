@@ -13,6 +13,7 @@ concurrency:
 
 jobs:
     build:
+        if: github.repository == 'element-hq/element-web'
         name: GitHub Pages
         runs-on: ubuntu-26.04
         steps:
@@ -37,6 +38,7 @@ jobs:
                   path: ./docs/.vitepress/dist
 
     deploy:
+        if: github.repository == 'element-hq/element-web'
         environment:
             name: github-pages
             url: ${{ steps.deployment.outputs.page_url }}

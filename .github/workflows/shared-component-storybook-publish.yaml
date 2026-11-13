@@ -12,10 +12,12 @@ permissions:
 
 jobs:
     build:
+        if: github.repository == 'element-hq/element-web'
         name: Build storybook
         uses: ./.github/workflows/shared-component-storybook-build.yml
 
     publish:
+        if: github.repository == 'element-hq/element-web'
         name: Publish storybook
         runs-on: ubuntu-latest
         needs: build

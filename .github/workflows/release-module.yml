@@ -10,6 +10,7 @@ permissions: {}
 
 jobs:
     release:
+        if: github.repository == 'element-hq/element-web'
         name: Build and release module
         runs-on: ubuntu-26.04
         permissions:

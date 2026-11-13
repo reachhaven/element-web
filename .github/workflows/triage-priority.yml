@@ -8,6 +8,7 @@ permissions: {}
 
 jobs:
     apply-priority-label:
+        if: github.repository == 'element-hq/element-web'
         name: Derive P-label from S-* and O-* labels
         uses: element-hq/element-meta/.github/workflows/apply-priority-label.yml@develop # zizmor: ignore[unpinned-uses]
         permissions:

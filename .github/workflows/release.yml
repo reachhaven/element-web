@@ -14,6 +14,7 @@ concurrency: ${{ github.workflow }}
 permissions: {}
 jobs:
     release:
+        if: github.repository == 'element-hq/element-web'
         uses: matrix-org/matrix-js-sdk/.github/workflows/release-make.yml@develop # zizmor: ignore[unpinned-uses]
         permissions:
             contents: write
@@ -34,6 +35,7 @@ jobs:
             version-dirs: apps/web apps/desktop
 
     check:
+        if: github.repository == 'element-hq/element-web'
         name: Post release checks
         needs: release
         runs-on: ubuntu-26.04

@@ -48,8 +48,10 @@ jobs:
         uses: ./.github/workflows/build_desktop_prepare.yaml
         # Run if it's NOT a release, OR if it is a release and does NOT start with 'module/'
         if: |
+            github.repository == 'element-hq/element-web' && (
             github.event_name != 'release' ||
             !startsWith(github.event.release.tag_name, 'module/')
+            )
         with:
             config: element.io/${{ inputs.mode || (github.event_name == 'release' && 'release') || 'nightly' }}
             version: ${{ (inputs.mode != 'release' && github.event_name != 'release') && 'develop' || '' }}
@@ -60,6 +62,7 @@ jobs:
             CF_R2_TOKEN: ${{ secrets.CF_R2_TOKEN }}
 
     trigger-pro-pipeline:
+        if: github.repository == 'element-hq/element-web'
         name: Trigger Pro pipeline
         needs: prepare
         runs-on: ubuntu-26.04
@@ -75,7 +78,7 @@ jobs:
                       }
 
     windows:
-        if: github.event_name != 'workflow_dispatch' || inputs.windows
+        if: github.repository == 'element-hq/element-web' && (github.event_name != 'workflow_dispatch' || inputs.windows)
         needs: prepare
         name: Windows ${{ matrix.arch }}
         strategy:
@@ -91,7 +94,7 @@ jobs:
             version: ${{ needs.prepare.outputs.nightly-version }}
 
     macos:
-        if: github.event_name != 'workflow_dispatch' || inputs.macos
+        if: github.repository == 'element-hq/element-web' && (github.event_name != 'workflow_dispatch' || inputs.macos)
         needs: prepare
         name: macOS
         uses: ./.github/workflows/build_desktop_macos.yaml
@@ -102,7 +105,7 @@ jobs:
             version: ${{ needs.prepare.outputs.nightly-version }}
 
     linux:
-        if: github.event_name != 'workflow_dispatch' || inputs.linux
+        if: github.repository == 'element-hq/element-web' && (github.event_name != 'workflow_dispatch' || inputs.linux)
         needs: prepare
         name: Linux ${{ matrix.arch }}
         strategy:
@@ -121,7 +124,7 @@ jobs:
             - windows
         runs-on: ubuntu-26.04
         name: ${{ needs.prepare.outputs.deploy == 'true' && 'Deploy' || 'Deploy (dry-run)' }}
-        if: always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+        if: github.repository == 'element-hq/element-web' && always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
         environment: ${{ needs.prepare.outputs.deploy == 'true' && 'packages.element.io' || '' }}
         steps:
             - name: Download artifacts
@@ -297,7 +300,7 @@ jobs:
         needs: deploy
         runs-on: ubuntu-26.04
         name: Deploy builds to ESS
-        if: needs.prepare.outputs.deploy == 'true' && github.event_name == 'release'
+        if: github.repository == 'element-hq/element-web' && needs.prepare.outputs.deploy == 'true' && github.event_name == 'release'
         env:
             BUCKET_NAME: "element-desktop-msi.onprem.element.io"
             AWS_REGION: "eu-central-1"

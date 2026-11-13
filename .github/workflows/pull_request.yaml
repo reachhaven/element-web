@@ -9,6 +9,7 @@ on:
 permissions: {}
 jobs:
     action:
+        if: github.repository == 'element-hq/element-web'
         uses: matrix-org/matrix-js-sdk/.github/workflows/pull_request.yaml@develop # zizmor: ignore[unpinned-uses]
         permissions:
             pull-requests: write
@@ -19,11 +20,13 @@ jobs:
     bypass-cla:
         name: Bypass license/cla
         if: >
+            github.repository == 'element-hq/element-web' && (
             github.event_name == 'pull_request_target'
             && contains(github.event.pull_request.labels.*.name, 'X-Bypass-CLA')
             && (
               github.event.action == 'synchronize'
               || (github.event.action == 'labeled' && github.event.label.name == 'X-Bypass-CLA')
+            )
             )
         runs-on: ubuntu-26.04
         permissions:
