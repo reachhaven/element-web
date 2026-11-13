@@ -15,7 +15,7 @@ import {
     THREAD_RELATION_TYPE,
     M_POLL_START,
 } from "matrix-js-sdk/src/matrix";
-import React, { type JSX, type ReactElement, type ReactNode, useContext } from "react";
+import React, { type JSX, type ReactElement, type ReactNode, useContext, useMemo } from "react";
 import {
     MicOnIcon,
     OverflowHorizontalIcon,
@@ -44,6 +44,10 @@ import { useSettingValue } from "../../../hooks/useSettings";
 import AccessibleButton, { type ButtonEvent } from "../elements/AccessibleButton";
 import { useScopedRoomContext } from "../../../contexts/ScopedRoomContext.tsx";
 import { useRoomUploadViewModel } from "../../../viewmodels/room/RoomUploadViewModel.tsx";
+import SdkConfig from "../../../SdkConfig";
+import { createGifProvider } from "../../../gifs/createGifProvider";
+import type { GifProvider } from "../../../gifs/types";
+import { GifButton } from "./GifButton";
 
 interface IProps {
     addEmoji: (emoji: string) => boolean;
@@ -69,6 +73,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
     const { room, narrow } = useScopedRoomContext("room", "narrow");
 
     const isWysiwygLabEnabled = useSettingValue("feature_wysiwyg_composer");
+    const gifProvider = useMemo(() => createGifProvider(SdkConfig.get("gif_provider")), []);
 
     if (!matrixClient || !room || props.haveRecording) {
         return null;
@@ -98,6 +103,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
                     key={type}
                 />
             )),
+            gifButton(props, room, gifProvider),
             showStickersButton(props),
             voiceRecordingButton(props, narrow),
             props.showPollsButton ? pollButton(room, props.relation) : null,
@@ -114,6 +120,7 @@ const MessageComposerButtons: React.FC<IProps> = (props: IProps) => {
             ) : (
                 emojiButton(props)
             ),
+            gifButton(props, room, gifProvider),
             <UploadButton key="upload" vm={roomUploadVM} />,
         ];
         moreButtons = [
@@ -170,6 +177,18 @@ function emojiButton(props: IProps): ReactElement {
             className="mx_MessageComposer_button"
         />
     );
+}
+
+function gifButton(props: IProps, room: Room, provider: GifProvider | null): ReactElement | null {
+    return provider ? (
+        <GifButton
+            key="gif"
+            provider={provider}
+            room={room}
+            relation={props.relation}
+            menuPosition={props.menuPosition}
+        />
+    ) : null;
 }
 
 function showStickersButton(props: IProps): ReactElement | null {

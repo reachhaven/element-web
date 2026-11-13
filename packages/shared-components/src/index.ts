@@ -16,6 +16,7 @@ export * from "./core/EmojiPicker";
 export * from "./core/FacePile/FacePileView.tsx";
 export * from "./core/roving";
 export * from "./room/composer/Banner";
+export * from "./room/composer/GifPickerView";
 export * from "./room/composer/UploadButton";
 export * from "./room/composer/MessageComposerUrlPreview/index.ts";
 export * from "./crypto/SasEmoji";
