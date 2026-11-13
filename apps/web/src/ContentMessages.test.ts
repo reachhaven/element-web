@@ -15,6 +15,7 @@ import {
     type ISendEventResponse,
     type MatrixClient,
     MatrixError,
+    MatrixEvent,
     RelationType,
     type UploadResponse,
 } from "matrix-js-sdk/src/matrix";
@@ -31,6 +32,8 @@ import ErrorDialog from "./components/views/dialogs/ErrorDialog";
 import UploadConfirmDialog from "./components/views/dialogs/UploadConfirmDialog";
 import { _t } from "./languageHandler";
 import { PosthogAnalytics } from "./PosthogAnalytics";
+import SettingsStore from "./settings/SettingsStore";
+import { MediaEventHelper } from "./utils/MediaEventHelper";
 
 vi.mock("matrix-encrypt-attachment", () => ({ default: { encryptAttachment: vi.fn().mockResolvedValue({}) } }));
 
@@ -329,6 +332,145 @@ describe("ContentMessages", () => {
             );
             dialogSpy.mockRestore();
         });
+
+        describe("captions", () => {
+            const file = new File(["hello"], "notes.txt", { type: "text/plain" });
+            const contentWithoutCaption = {
+                "body": "notes.txt",
+                "msgtype": "m.file",
+                "url": "mxc://server/file",
+                "info": { size: 5, mimetype: "text/plain" },
+                "m.mentions": {},
+            };
+
+            beforeEach(() => {
+                vi.mocked(client.uploadContent).mockResolvedValue({ content_uri: "mxc://server/file" });
+            });
+
+            afterEach(() => {
+                vi.restoreAllMocks();
+            });
+
+            it.each([
+                ["no caption", undefined],
+                ["an empty caption", ""],
+                ["a blank caption", "   "],
+                ["a caption that is the file name", "notes.txt"],
+            ])("should send the file name as the body for %s", async (_, caption) => {
+                await contentMessages.sendContentToRoom(file, roomId, undefined, client, undefined, undefined, caption);
+
+                expect(client.sendMessage).toHaveBeenCalledWith(roomId, null, contentWithoutCaption);
+            });
+
+            it("should send the caption as the body and keep the file name in filename", async () => {
+                await contentMessages.sendContentToRoom(
+                    file,
+                    roomId,
+                    undefined,
+                    client,
+                    undefined,
+                    undefined,
+                    " Meeting notes ",
+                );
+
+                const content = { ...contentWithoutCaption, body: "Meeting notes", filename: "notes.txt" };
+                expect(client.sendMessage).toHaveBeenCalledWith(roomId, null, content);
+                // The timeline shows such a message with a caption
+                expect(MediaEventHelper.hasCaption(new MatrixEvent({ type: "m.room.message", content }))).toBe(true);
+            });
+
+            it("should send the caption of a reply", async () => {
+                const replyToEvent = mkEvent({
+                    type: "m.room.message",
+                    user: "@bob:test",
+                    room: roomId,
+                    content: {},
+                    event: true,
+                });
+
+                await contentMessages.sendContentToRoom(
+                    file,
+                    roomId,
+                    undefined,
+                    client,
+                    replyToEvent,
+                    undefined,
+                    "Meeting notes",
+                );
+
+                expect(client.sendMessage).toHaveBeenCalledWith(
+                    roomId,
+                    null,
+                    expect.objectContaining({
+                        "body": "Meeting notes",
+                        "filename": "notes.txt",
+                        "m.relates_to": { "m.in_reply_to": { event_id: replyToEvent.getId() } },
+                    }),
+                );
+            });
+
+            it("should send the caption of an image", async () => {
+                const image = new File([], "photo.jpg", { type: "image/jpeg" });
+                await contentMessages.sendContentToRoom(
+                    image,
+                    roomId,
+                    undefined,
+                    client,
+                    undefined,
+                    undefined,
+                    "Lunch",
+                );
+
+                expect(client.sendMessage).toHaveBeenCalledWith(
+                    roomId,
+                    null,
+                    expect.objectContaining({ msgtype: "m.image", body: "Lunch", filename: "photo.jpg" }),
+                );
+            });
+
+            it("should send the HTML of a caption written in Markdown", async () => {
+                await contentMessages.sendContentToRoom(
+                    file,
+                    roomId,
+                    undefined,
+                    client,
+                    undefined,
+                    undefined,
+                    "Notes from **Monday**",
+                );
+
+                expect(client.sendMessage).toHaveBeenCalledWith(roomId, null, {
+                    ...contentWithoutCaption,
+                    body: "Notes from **Monday**",
+                    filename: "notes.txt",
+                    format: "org.matrix.custom.html",
+                    formatted_body: "Notes from <strong>Monday</strong>",
+                });
+            });
+
+            it("should send a caption as plain text when Markdown is turned off", async () => {
+                const getValue = SettingsStore.getValue;
+                vi.spyOn(SettingsStore, "getValue").mockImplementation((name, ...rest) =>
+                    name === "MessageComposerInput.useMarkdown" ? false : getValue(name, ...rest),
+                );
+
+                await contentMessages.sendContentToRoom(
+                    file,
+                    roomId,
+                    undefined,
+                    client,
+                    undefined,
+                    undefined,
+                    "Notes from **Monday**",
+                );
+
+                expect(client.sendMessage).toHaveBeenCalledWith(roomId, null, {
+                    ...contentWithoutCaption,
+                    body: "Notes from **Monday**",
+                    filename: "notes.txt",
+                });
+            });
+        });
     });
 
     describe("getCurrentUploads", () => {
@@ -558,5 +700,89 @@ describe("sendContentListToRoom analytics", () => {
             }),
         );
         expect(contentMessages.sendContentToRoom).not.toHaveBeenCalled();
+    });
+});
+
+describe("sendContentListToRoom captions", () => {
+    const roomId = "!roomId:server";
+    let client: MatrixClient;
+    let contentMessages: ContentMessages;
+
+    beforeEach(() => {
+        client = createTestClient();
+        vi.mocked(client.getMediaConfig).mockResolvedValue({});
+        vi.mocked(doMaybeLocalRoomAction).mockImplementation(
+            <T>(roomId: string, fn: (actualRoomId: string) => Promise<T>) => fn(roomId),
+        );
+        contentMessages = new ContentMessages();
+        vi.spyOn(contentMessages, "sendContentToRoom").mockResolvedValue(undefined);
+        vi.spyOn(PosthogAnalytics.instance, "trackEvent").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    /**
+     * Answer the confirmation dialogs in turn.
+     * @param answers - For each dialog: whether to upload, whether to upload the remaining files too, and the caption.
+     */
+    function answerConfirmDialogs(...answers: [boolean, boolean, string][]): void {
+        vi.spyOn(Modal, "createDialog").mockImplementation((component: unknown) => {
+            if (component === UploadConfirmDialog) {
+                return { finished: Promise.resolve(answers.shift()) } as any;
+            }
+            // Any other dialog (e.g. the fetching-media-config spinner) never resolves on its own.
+            return { finished: new Promise(() => {}), close: vi.fn() } as any;
+        });
+    }
+
+    function mkFiles(...names: string[]): File[] {
+        return names.map((name) => new File(["content"], name, { type: "image/png" }));
+    }
+
+    it("sends each file with the caption entered for it", async () => {
+        const files = mkFiles("a.png", "b.png");
+        answerConfirmDialogs([true, false, "First"], [true, false, ""]);
+
+        await contentMessages.sendContentListToRoom(files, roomId, undefined, undefined, client);
+
+        expect(Modal.createDialog).toHaveBeenCalledWith(
+            UploadConfirmDialog,
+            expect.objectContaining({ file: files[0], allowCaption: true }),
+        );
+
+        expect(contentMessages.sendContentToRoom).toHaveBeenCalledTimes(2);
+        expect(contentMessages.sendContentToRoom).toHaveBeenNthCalledWith(
+            1,
+            files[0],
+            roomId,
+            undefined,
+            client,
+            undefined,
+            expect.any(Promise),
+            "First",
+        );
+        expect(contentMessages.sendContentToRoom).toHaveBeenNthCalledWith(
+            2,
+            files[1],
+            roomId,
+            undefined,
+            client,
+            undefined,
+            expect.any(Promise),
+            "",
+        );
+    });
+
+    it("sends the files uploaded without confirmation without a caption", async () => {
+        const files = mkFiles("a.png", "b.png", "c.png");
+        answerConfirmDialogs([true, true, "First"]);
+
+        await contentMessages.sendContentListToRoom(files, roomId, undefined, undefined, client);
+
+        expect(contentMessages.sendContentToRoom).toHaveBeenCalledTimes(3);
+        const captions = vi.mocked(contentMessages.sendContentToRoom).mock.calls.map((call) => call[6]);
+        expect(captions).toEqual(["First", undefined, undefined]);
     });
 });

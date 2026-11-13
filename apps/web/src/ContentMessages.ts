@@ -60,6 +60,7 @@ import { doMaybeLocalRoomAction } from "./utils/local-room";
 import { blobIsAnimated } from "./utils/Image.ts";
 import { PosthogAnalytics } from "./PosthogAnalytics.ts";
 import { cacheUploadedMedia } from "./utils/UploadedMediaCache";
+import { htmlSerializeFromMdIfNeeded } from "./editor/serialize";
 
 // scraped out of a macOS hidpi (5660ppm) screenshot png
 //                  5669 px (x-axis)      , 5669 px (y-axis)      , per metre
@@ -408,6 +409,37 @@ export async function uploadFile(
     }
 }
 
+/**
+ * Give a media message a caption, as described in https://spec.matrix.org/v1.10/client-server-api/#media-captions:
+ * the caption goes into `body` and the file name into `filename`. Markdown in the caption becomes its
+ * `formatted_body` through the serialiser the message composer uses, unless the user has turned Markdown off.
+ *
+ * A caption that is blank or the same as the file name is left out, as clients would read it as the file name.
+ *
+ * @param content - The content of the media message.
+ * @param fileName - The name of the file being sent.
+ * @param caption - The caption entered for the file, if any.
+ */
+function attachCaption(
+    content: Pick<MediaEventContent, "body" | "filename" | "format" | "formatted_body">,
+    fileName: string,
+    caption: string | undefined,
+): void {
+    const text = caption?.trim();
+    if (!text || text === fileName) return;
+
+    content.body = text;
+    content.filename = fileName;
+
+    if (SettingsStore.getValue("MessageComposerInput.useMarkdown")) {
+        const formattedCaption = htmlSerializeFromMdIfNeeded(text);
+        if (formattedCaption !== undefined) {
+            content.format = "org.matrix.custom.html";
+            content.formatted_body = formattedCaption;
+        }
+    }
+}
+
 export default class ContentMessages {
     private inprogress: RoomUpload[] = [];
     private mediaConfig: IMediaConfig | null = null;
@@ -498,18 +530,22 @@ export default class ContentMessages {
         for (let i = 0; i < okFiles.length; ++i) {
             const file = okFiles[i];
             const loopPromiseBefore = promBefore;
+            // Only a file shown in the confirmation dialog can be given a caption
+            let caption: string | undefined;
 
             if (!uploadAll) {
                 const { finished } = Modal.createDialog(UploadConfirmDialog, {
                     file,
                     currentIndex: i,
                     totalFiles: okFiles.length,
+                    allowCaption: true,
                 });
-                const [shouldContinue, shouldUploadAll] = await finished;
+                const [shouldContinue, shouldUploadAll, confirmedCaption] = await finished;
                 if (!shouldContinue) break;
                 if (shouldUploadAll) {
                     uploadAll = true;
                 }
+                caption = confirmedCaption;
             }
             sentFileTypes.push(file.type.split("/")[0]);
 
@@ -523,6 +559,7 @@ export default class ContentMessages {
                         matrixClient,
                         replyToEvent ?? undefined,
                         loopPromiseBefore,
+                        caption,
                     ),
                 matrixClient,
             );
@@ -584,6 +621,16 @@ export default class ContentMessages {
         dis.dispatch<UploadCanceledPayload>({ action: Action.UploadCanceled, upload });
     }
 
+    /**
+     * Uploads a file and sends it to a room.
+     * @param file - The file to send.
+     * @param roomId - The ID of the room to send the file to.
+     * @param relation - The relation of the message to another event, if any.
+     * @param matrixClient - The Matrix client to use for sending the file.
+     * @param replyToEvent - The event being replied to, if any.
+     * @param promBefore - A promise to wait for before sending the message, to keep the files in order.
+     * @param caption - The caption to send with the file, if any.
+     */
     public async sendContentToRoom(
         file: File,
         roomId: string,
@@ -591,6 +638,7 @@ export default class ContentMessages {
         matrixClient: MatrixClient,
         replyToEvent: MatrixEvent | undefined,
         promBefore?: Promise<any>,
+        caption?: string,
     ): Promise<void> {
         const fileName = file.name || _t("common|attachment");
         const content: Omit<MediaEventContent, "info"> & { info: Partial<MediaEventInfo> } = {
@@ -600,6 +648,7 @@ export default class ContentMessages {
             },
             msgtype: MsgType.File, // set more specifically later
         };
+        attachCaption(content, fileName, caption);
 
         // Attach mentions, which really only applies if there's a replyToEvent.
         attachMentions(matrixClient.getSafeUserId(), content, null, replyToEvent);

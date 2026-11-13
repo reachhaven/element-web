@@ -7,7 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { useCallback, type JSX } from "react";
+import React, { type ChangeEvent, type FormEvent, useCallback, useState, type JSX } from "react";
+import { Form } from "@vector-im/compound-web";
 
 import { _t } from "../../../languageHandler";
 import BaseDialog from "./BaseDialog";
@@ -28,7 +29,18 @@ interface IProps {
     currentIndex?: number;
     /** Defaults to 1. */
     totalFiles?: number;
-    onFinished: (uploadConfirmed: boolean, uploadAll?: boolean) => void;
+    /**
+     * Whether to offer a field for a caption, for a file that is sent as a message. Defaults to false, for uploads
+     * such as an avatar.
+     */
+    allowCaption?: boolean;
+    /**
+     * Called when the dialog is closed.
+     * @param uploadConfirmed - Whether to upload the file.
+     * @param uploadAll - Whether to also upload the remaining files, without asking about each of them.
+     * @param caption - The caption entered for this file, given when it is to be uploaded. Empty if none was entered.
+     */
+    onFinished: (uploadConfirmed: boolean, uploadAll?: boolean, caption?: string) => void;
 }
 
 const previewableFormats = ["video", "audio", "image"];
@@ -101,9 +113,11 @@ export default function UploadConfirmDialog({
     file,
     currentIndex = 0,
     totalFiles = 1,
+    allowCaption = false,
     onFinished,
 }: IProps): JSX.Element {
     const vm = useCreateAutoDisposedViewModel(() => new UploadPreviewViewModel(file));
+    const [caption, setCaption] = useState("");
 
     let title: string;
     if (totalFiles > 1 && currentIndex !== undefined) {
@@ -120,12 +134,26 @@ export default function UploadConfirmDialog({
     }, [onFinished]);
 
     const onUploadClick = useCallback((): void => {
-        onFinished(true);
-    }, [onFinished]);
+        onFinished(true, false, caption);
+    }, [onFinished, caption]);
 
+    // The caption belongs to the file shown here: the remaining files are uploaded without one.
     const onUploadAllClick = useCallback((): void => {
-        onFinished(true, true);
-    }, [onFinished]);
+        onFinished(true, true, caption);
+    }, [onFinished, caption]);
+
+    const onCaptionChange = useCallback((ev: ChangeEvent<HTMLInputElement>): void => {
+        setCaption(ev.target.value);
+    }, []);
+
+    // Pressing Enter in the caption field submits its form, which uploads the file.
+    const onCaptionSubmit = useCallback(
+        (ev: FormEvent<HTMLFormElement>): void => {
+            ev.preventDefault();
+            onUploadClick();
+        },
+        [onUploadClick],
+    );
 
     let uploadAllButton: JSX.Element | undefined;
     if (currentIndex + 1 < totalFiles) {
@@ -152,11 +180,26 @@ export default function UploadConfirmDialog({
                 </div>
             </div>
 
+            {allowCaption && (
+                <Form.Root className="mx_UploadConfirmDialog_caption" onSubmit={onCaptionSubmit}>
+                    <Form.Field name="caption">
+                        <Form.Label>{_t("upload_file|caption_label")}</Form.Label>
+                        <Form.TextControl
+                            value={caption}
+                            onChange={onCaptionChange}
+                            placeholder={_t("upload_file|caption_placeholder")}
+                            autoFocus={true}
+                        />
+                    </Form.Field>
+                </Form.Root>
+            )}
+
+            {/* The caption field takes the focus when there is one */}
             <DialogButtons
                 primaryButton={_t("action|upload")}
                 hasCancel={false}
                 onPrimaryButtonClick={onUploadClick}
-                focus={true}
+                focus={!allowCaption}
             >
                 {uploadAllButton}
             </DialogButtons>
