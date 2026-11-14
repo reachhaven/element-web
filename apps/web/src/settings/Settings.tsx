@@ -49,6 +49,7 @@ import { type IRightPanelForRoomStored } from "../stores/right-panel/RightPanelS
 import { type ILayoutSettings } from "../stores/widgets/WidgetLayoutStore.ts";
 import { type ReleaseAnnouncementData } from "../stores/ReleaseAnnouncementStore.ts";
 import { type RecentEmojiData } from "../emojipicker/recent.ts";
+import { type RecentGif } from "../gifs/recent.ts";
 import { type Assignable } from "../@types/common.ts";
 import { SortingAlgorithm } from "../stores/room-list-v3/skip-list/sorters/index.ts";
 import MediaPreviewConfigController from "./controllers/MediaPreviewConfigController.ts";
@@ -298,6 +299,7 @@ export interface Settings {
     "language": IBaseSetting<string>;
     "breadcrumb_rooms": IBaseSetting<string[]>;
     "recent_emoji": IBaseSetting<RecentEmojiData>;
+    "recent_gifs": IBaseSetting<RecentGif[]>;
     "showMediaEventIds": IBaseSetting<{ [eventId: string]: boolean }>;
     "pdfViewerState": IBaseSetting<{ [mxcUri: string]: PdfViewerState }>;
     "SpotlightSearch.recentSearches": IBaseSetting<string[]>;
@@ -1054,6 +1056,11 @@ export const SETTINGS: Settings = {
         supportedLevels: [SettingLevel.ACCOUNT],
         default: [],
         // For privacy
+        shouldExportToRageshake: false,
+    },
+    "recent_gifs": {
+        supportedLevels: LEVELS_DEVICE_ONLY_SETTINGS,
+        default: [],
         shouldExportToRageshake: false,
     },
     "SpotlightSearch.recentSearches": {

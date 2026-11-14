@@ -57,6 +57,27 @@ export interface WebConfigJson {
 
     map_style_url?: string; // for location-shared maps
 
+    /**
+     * GIF search service for the GIF picker in the message composer.
+     * The picker is only offered when this is set.
+     */
+    gif_provider?: {
+        /**
+         * The search API that `base_url` speaks.
+         */
+        provider: "giphy" | "klipy";
+        /**
+         * Root URL of the provider's API, or of a proxy in front of it. A path such as `/gifs` is
+         * resolved against the origin the client is served from. Requests for search and trending
+         * results go only to this URL.
+         */
+        base_url: string;
+        /**
+         * API key issued by the provider. Omit it when `base_url` is a proxy that adds the key.
+         */
+        api_key?: string;
+    };
+
     embedded_pages?: {
         welcome_url?: string;
         home_url?: string;

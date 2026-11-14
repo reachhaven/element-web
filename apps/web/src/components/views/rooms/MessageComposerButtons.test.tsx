@@ -9,7 +9,7 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import React from "react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, waitFor } from "test-utils-rtl";
 import { createTestClient, getRoomContext, mkStubRoom } from "test-utils";
 
@@ -19,6 +19,7 @@ import MessageComposerButtons from "./MessageComposerButtons";
 import { ScopedRoomContextProvider } from "../../../contexts/ScopedRoomContext.tsx";
 import { type RoomContextType } from "../../../contexts/RoomContext.ts";
 import { RoomUploadContextProvider } from "../../../viewmodels/room/RoomUploadViewModel.tsx";
+import SdkConfig from "../../../SdkConfig";
 
 describe("MessageComposerButtons", () => {
     // @ts-ignore - we're deliberately not implementing the whole interface here, but
@@ -172,6 +173,67 @@ describe("MessageComposerButtons", () => {
                     "Location",
                 ],
             ]);
+        });
+    });
+
+    describe("GIF button", () => {
+        afterEach(() => {
+            SdkConfig.reset();
+        });
+
+        it("should render next to the emoji button in wide mode when a GIF provider is configured", () => {
+            SdkConfig.add({ gif_provider: { provider: "giphy", base_url: "https://api.giphy.com", api_key: "key" } });
+
+            wrapAndRender(
+                <MessageComposerButtons
+                    {...mockProps}
+                    isMenuOpen={false}
+                    showLocationButton={true}
+                    showPollsButton={true}
+                    showStickersButton={true}
+                />,
+                false,
+            );
+
+            expect(getButtonLabels()).toEqual(["Emoji", "GIF", "Attachment", "More options"]);
+        });
+
+        it("should render in the menu in narrow mode when a GIF provider is configured", () => {
+            SdkConfig.add({ gif_provider: { provider: "klipy", base_url: "https://api.klipy.com" } });
+
+            wrapAndRender(
+                <MessageComposerButtons
+                    {...mockProps}
+                    isMenuOpen={true}
+                    showLocationButton={true}
+                    showPollsButton={true}
+                    showStickersButton={true}
+                />,
+                true,
+            );
+
+            expect(getButtonLabels()).toEqual([
+                "Emoji",
+                "More options",
+                ["Attachment", "GIF", "Sticker", "Poll", "Location"],
+            ]);
+        });
+
+        it("should not render when the GIF provider is not valid", () => {
+            SdkConfig.add({ gif_provider: { provider: "giphy", base_url: "not a url" } });
+
+            wrapAndRender(
+                <MessageComposerButtons
+                    {...mockProps}
+                    isMenuOpen={false}
+                    showLocationButton={true}
+                    showPollsButton={true}
+                    showStickersButton={true}
+                />,
+                false,
+            );
+
+            expect(getButtonLabels()).toEqual(["Emoji", "Attachment", "More options"]);
         });
     });
 });
