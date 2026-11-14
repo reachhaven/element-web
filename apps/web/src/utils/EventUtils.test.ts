@@ -210,6 +210,74 @@ describe("EventUtils", () => {
             },
         });
 
+        const imageEvent = new MatrixEvent({
+            type: EventType.RoomMessage,
+            sender: userId,
+            content: {
+                msgtype: MsgType.Image,
+                body: "image.png",
+                url: "mxc://server/image",
+            },
+        });
+
+        const captionedFileEvent = new MatrixEvent({
+            type: EventType.RoomMessage,
+            sender: userId,
+            content: {
+                msgtype: MsgType.File,
+                body: "The minutes of Monday's meeting",
+                filename: "minutes.pdf",
+                url: "mxc://server/minutes",
+            },
+        });
+
+        const audioEvent = new MatrixEvent({
+            type: EventType.RoomMessage,
+            sender: userId,
+            content: {
+                msgtype: MsgType.Audio,
+                body: "song.ogg",
+                url: "mxc://server/song",
+            },
+        });
+
+        const encryptedVideoEvent = new MatrixEvent({
+            type: EventType.RoomMessage,
+            sender: userId,
+            content: {
+                msgtype: MsgType.Video,
+                body: "clip.mp4",
+                file: {
+                    url: "mxc://server/clip",
+                    key: { alg: "A256CTR", ext: true, k: "key", key_ops: ["encrypt", "decrypt"], kty: "oct" },
+                    iv: "iv",
+                    hashes: { sha256: "hash" },
+                    v: "v2",
+                },
+            },
+        });
+
+        const voiceMessageEvent = new MatrixEvent({
+            type: EventType.RoomMessage,
+            sender: userId,
+            content: {
+                "msgtype": MsgType.Audio,
+                "body": "Voice message",
+                "url": "mxc://server/voice",
+                "org.matrix.msc3245.voice": {},
+            },
+        });
+
+        const bobsImageEvent = new MatrixEvent({
+            type: EventType.RoomMessage,
+            sender: "@bob:server",
+            content: {
+                msgtype: MsgType.Image,
+                body: "image.png",
+                url: "mxc://server/image",
+            },
+        });
+
         type TestCase = [string, MatrixEvent];
 
         const uneditableCases: TestCase[] = [
@@ -222,6 +290,8 @@ describe("EventUtils", () => {
             ["event with non-string body", objectContentBody],
             ["event not sent by current user", bobsTextMessage],
             ["event with a replace relation", replaceRelationEvent],
+            ["voice message", voiceMessageEvent],
+            ["media not sent by current user", bobsImageEvent],
         ];
 
         const editableCases: TestCase[] = [
@@ -229,6 +299,10 @@ describe("EventUtils", () => {
             ["emote event", emoteEvent],
             ["poll start event", pollStartEvent],
             ["event with a content body", niceTextMessage],
+            ["image", imageEvent],
+            ["file with a caption", captionedFileEvent],
+            ["audio clip", audioEvent],
+            ["encrypted video", encryptedVideoEvent],
         ];
 
         describe("canEditContent()", () => {
@@ -443,6 +517,22 @@ describe("EventUtils", () => {
                     matrixClient: mockClient,
                 }),
             ).toBeUndefined();
+        });
+
+        it("should find the last media message of the user, for its caption", () => {
+            const imageMessage = new MatrixEvent({
+                type: EventType.RoomMessage,
+                sender: userId,
+                content: { msgtype: MsgType.Image, body: "image.png", url: "mxc://server/image" },
+            });
+
+            expect(
+                findEditableEvent({
+                    events: [niceTextMessage, imageMessage],
+                    isForward: false,
+                    matrixClient: mockClient,
+                }),
+            ).toBe(imageMessage);
         });
     });
 

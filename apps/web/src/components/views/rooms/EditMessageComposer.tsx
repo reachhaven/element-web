@@ -24,7 +24,7 @@ import { getCaretOffsetAndText } from "../../../editor/dom";
 import { htmlSerializeIfNeeded, textSerialize, containsEmote, stripEmoteCommand } from "../../../editor/serialize";
 import { findEditableEvent } from "../../../utils/EventUtils";
 import { parseEvent } from "../../../editor/deserialize";
-import { CommandPartCreator, type Part, type PartCreator, type SerializedPart } from "../../../editor/parts";
+import { CommandPartCreator, type Part, PartCreator, type SerializedPart } from "../../../editor/parts";
 import type EditorStateTransfer from "../../../utils/EditorStateTransfer";
 import BasicMessageComposer, { REGEX_EMOTICON } from "./BasicMessageComposer";
 import { CommandCategories } from "../../../slash-commands/SlashCommands";
@@ -43,9 +43,10 @@ import { KeyBindingAction } from "../../../accessibility/KeyboardShortcuts";
 import { PosthogAnalytics } from "../../../PosthogAnalytics";
 import { editorRoomKey, editorStateKey } from "../../../Editing";
 import type DocumentOffset from "../../../editor/offset";
-import { attachMentions, attachRelation } from "../../../utils/messages";
+import { attachMentions, attachRelation, createCaptionEditContent } from "../../../utils/messages";
 import { filterBoolean } from "../../../utils/arrays";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
+import { MediaEventHelper } from "../../../utils/MediaEventHelper";
 
 // exported for tests
 export function createEditContent(
@@ -53,6 +54,17 @@ export function createEditContent(
     editedEvent: MatrixEvent,
     replyToEvent?: MatrixEvent,
 ): RoomMessageEventContent {
+    // A media message is edited for its caption, which is sent as written: a leading /me does not make it an emote
+    if (MediaEventHelper.canHaveCaption(editedEvent)) {
+        const content = createCaptionEditContent(
+            editedEvent,
+            textSerialize(model),
+            htmlSerializeIfNeeded(model, { useMarkdown: SettingsStore.getValue("MessageComposerInput.useMarkdown") }),
+        );
+        attachMentions(editedEvent.sender!.userId, content, model, replyToEvent, editedEvent.getContent());
+        return content;
+    }
+
     const isEmote = containsEmote(model);
     if (isEmote) {
         model = stripEmoteCommand(model);
@@ -226,6 +238,13 @@ class EditMessageComposer extends React.Component<IEditMessageComposerProps, ISt
         return editorStateKey(this.props.editState.getEvent().getId()!);
     }
 
+    /**
+     * Whether the message being edited is a media message, of which only the caption is edited.
+     */
+    private get isEditingCaption(): boolean {
+        return MediaEventHelper.canHaveCaption(this.props.editState.getEvent());
+    }
+
     private get events(): MatrixEvent[] {
         const liveTimelineEvents = this.context.liveTimeline?.getEvents();
         const room = this.getRoom();
@@ -324,7 +343,8 @@ class EditMessageComposer extends React.Component<IEditMessageComposerProps, ISt
         // either text content or list of URL previews modified counts
         if (this.isContentModified(newContent) || this.props.isUrlPreviewsModified) {
             const roomId = editedEvent.getRoomId()!;
-            if (!containsEmote(this.model) && isSlashCommand(this.model)) {
+            // Commands are for text messages: a caption is sent as written
+            if (!this.isEditingCaption && !containsEmote(this.model) && isSlashCommand(this.model)) {
                 const [cmd, args, commandText] = getSlashCommand(roomId, this.model);
                 if (cmd) {
                     const threadId = editedEvent?.getThread()?.id || null;
@@ -413,7 +433,10 @@ class EditMessageComposer extends React.Component<IEditMessageComposerProps, ISt
     private createEditorModel(): boolean {
         const { editState } = this.props;
         const room = this.getRoom();
-        const partCreator = new CommandPartCreator(room, this.props.mxClient);
+        // a caption is sent as written, so it is not offered commands
+        const partCreator = this.isEditingCaption
+            ? new PartCreator(room, this.props.mxClient)
+            : new CommandPartCreator(room, this.props.mxClient);
 
         let parts: Part[];
         let isRestored = false;
@@ -425,11 +448,16 @@ class EditMessageComposer extends React.Component<IEditMessageComposerProps, ISt
         } else {
             // otherwise, either restore serialized parts from localStorage or parse the body of the event
             const restoredParts = this.restoreStoredEditorState(partCreator);
-            parts =
-                restoredParts ||
-                parseEvent(editState.getEvent(), partCreator, {
+            if (restoredParts) {
+                parts = restoredParts;
+            } else if (this.isEditingCaption && !MediaEventHelper.hasCaption(editState.getEvent())) {
+                // the body of a media message without a caption is the name of its file, so there is no text to edit
+                parts = [];
+            } else {
+                parts = parseEvent(editState.getEvent(), partCreator, {
                     shouldEscape: SettingsStore.getValue("MessageComposerInput.useMarkdown"),
                 });
+            }
             isRestored = !!restoredParts;
         }
         this.model = new EditorModel(parts, partCreator);
@@ -482,6 +510,7 @@ class EditMessageComposer extends React.Component<IEditMessageComposerProps, ISt
                     threadId={this.props.editState?.getEvent()?.getThread()?.id}
                     initialCaret={this.props.editState.getCaret() ?? undefined}
                     label={_t("composer|edit_composer_label")}
+                    placeholder={this.isEditingCaption ? _t("composer|placeholder_caption") : undefined}
                     onChange={this.onChange}
                 />
                 <div className="mx_EditMessageComposer_buttons">

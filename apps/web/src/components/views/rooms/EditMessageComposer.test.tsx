@@ -268,6 +268,45 @@ describe("<EditMessageComposer/>", () => {
             });
         });
 
+        it("puts the text into the caption of a media message, keeping the media", async () => {
+            const imageEvent = mkEvent({
+                type: "m.room.message",
+                user: "@alice:test",
+                room: "!abc:test",
+                content: { msgtype: "m.image", body: "image.png", url: "mxc://server/image" },
+                event: true,
+            });
+            const model = new EditorModel([], createPartCreator());
+            const documentOffset = new DocumentOffset(17, true);
+            await model.update("/me a *sunny* day", "insertText", documentOffset);
+
+            const content = createEditContent(model, imageEvent);
+
+            // the caption is sent as written: /me does not turn the image into an emote
+            expect(content).toEqual({
+                "msgtype": "m.image",
+                "url": "mxc://server/image",
+                "body": "* /me a *sunny* day",
+                "filename": "image.png",
+                "format": "org.matrix.custom.html",
+                "formatted_body": "* /me a <em>sunny</em> day",
+                "m.new_content": {
+                    "msgtype": "m.image",
+                    "url": "mxc://server/image",
+                    "body": "/me a *sunny* day",
+                    "filename": "image.png",
+                    "format": "org.matrix.custom.html",
+                    "formatted_body": "/me a <em>sunny</em> day",
+                    "m.mentions": {},
+                },
+                "m.relates_to": {
+                    event_id: imageEvent.getId(),
+                    rel_type: "m.replace",
+                },
+                "m.mentions": {},
+            });
+        });
+
         it("allows sending double-slash escaped slash commands correctly", async () => {
             const model = new EditorModel([], createPartCreator());
             const documentOffset = new DocumentOffset(32, true);
@@ -645,6 +684,104 @@ describe("<EditMessageComposer/>", () => {
             await waitFor(() => expect(updateUrlPreviews).toHaveBeenCalled());
             const model = updateUrlPreviews.mock.calls.at(-1)![0] as EditorModel;
             expect(model.contentPlainText).toContain("https://example.org");
+        });
+    });
+
+    describe("when editing the caption of a media message", () => {
+        const image = {
+            msgtype: "m.image",
+            url: "mxc://server/image",
+            info: { mimetype: "image/png", size: 1234, w: 100, h: 50 },
+        };
+
+        const mkImageEvent = (content: Record<string, string>) =>
+            mkEvent({
+                type: "m.room.message",
+                user: userId,
+                room: roomId,
+                content: { ...image, ...content },
+                event: true,
+            });
+
+        it("should start empty, asking for a caption, when the media has none", () => {
+            getComponent(new EditorStateTransfer(mkImageEvent({ body: "image.png" })));
+
+            const input = screen.getByRole("textbox");
+            expect(input).toHaveTextContent("");
+            expect(input.style.getPropertyValue("--placeholder")).toBe(`'${CSS.escape("Add a caption…")}'`);
+        });
+
+        it("should start with the caption of the media", () => {
+            getComponent(new EditorStateTransfer(mkImageEvent({ body: "A sunny day", filename: "image.png" })));
+
+            expect(screen.getByRole("textbox")).toHaveTextContent("A sunny day");
+        });
+
+        it("should send the new caption with the media", async () => {
+            const imageEvent = mkImageEvent({ body: "image.png" });
+            getComponent(new EditorStateTransfer(imageEvent));
+            await editText("A sunny day");
+
+            fireEvent.click(screen.getByText("Save"));
+
+            await waitFor(() =>
+                expect(mockClient.sendMessage).toHaveBeenCalledWith(roomId, null, {
+                    ...image,
+                    "body": "* A sunny day",
+                    "filename": "image.png",
+                    "m.new_content": {
+                        ...image,
+                        "body": "A sunny day",
+                        "filename": "image.png",
+                        "m.mentions": {},
+                    },
+                    "m.relates_to": {
+                        event_id: imageEvent.getId(),
+                        rel_type: "m.replace",
+                    },
+                    "m.mentions": {},
+                }),
+            );
+        });
+
+        it("should send a caption starting with a slash as written rather than run it as a command", async () => {
+            getComponent(new EditorStateTransfer(mkImageEvent({ body: "image.png" })));
+            await editText("/shrug at the view");
+
+            fireEvent.click(screen.getByText("Save"));
+
+            await waitFor(() => expect(mockClient.sendMessage).toHaveBeenCalled());
+            const messageContent = mockClient.sendMessage.mock.calls[0][2] as RoomMessageEventContent &
+                ReplacementEvent<RoomMessageEventContent>;
+            expect(messageContent["m.new_content"]).toEqual(
+                expect.objectContaining({ msgtype: "m.image", body: "/shrug at the view", filename: "image.png" }),
+            );
+        });
+
+        it("should not offer commands for a caption", async () => {
+            getComponent(new EditorStateTransfer(mkImageEvent({ body: "image.png" })));
+            await editText("/sh");
+
+            // the mocked autocompleter offers Dan for any query it is asked
+            await expect(screen.findByText("Dan", undefined, { timeout: 1000 })).rejects.toThrow();
+        });
+
+        it("should take the caption away, rather than offer to delete the message, when it is cleared", async () => {
+            const imageEvent = mkImageEvent({ body: "A sunny day", filename: "image.png" });
+            getComponent(new EditorStateTransfer(imageEvent));
+            await userEvent.clear(screen.getByRole("textbox"));
+
+            fireEvent.click(screen.getByText("Save"));
+
+            await waitFor(() => expect(mockClient.sendMessage).toHaveBeenCalled());
+            const messageContent = mockClient.sendMessage.mock.calls[0][2] as RoomMessageEventContent &
+                ReplacementEvent<RoomMessageEventContent>;
+            expect(messageContent["m.new_content"]).toEqual({
+                ...image,
+                "body": "image.png",
+                "filename": "image.png",
+                "m.mentions": {},
+            });
         });
     });
 });

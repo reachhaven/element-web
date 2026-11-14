@@ -102,6 +102,61 @@ describe("createMessageContent", () => {
             });
         });
 
+        it("Should edit the caption of a media message, keeping the media", async () => {
+            // When
+            const editedEvent = mkEvent({
+                type: "m.room.message",
+                room: "myfakeroom",
+                user: "myfakeuser2",
+                content: {
+                    msgtype: "m.image",
+                    body: "image.png",
+                    url: "mxc://server/image",
+                    info: { mimetype: "image/png" },
+                },
+                event: true,
+            });
+            const content = await createMessageContent(message, true, { editedEvent });
+
+            // Then
+            const image = { msgtype: "m.image", url: "mxc://server/image", info: { mimetype: "image/png" } };
+            expect(content).toEqual({
+                ...image,
+                "body": "* *__hello__ world*",
+                "filename": "image.png",
+                "format": "org.matrix.custom.html",
+                "formatted_body": `* ${message}`,
+                "m.new_content": {
+                    ...image,
+                    body: "*__hello__ world*",
+                    filename: "image.png",
+                    format: "org.matrix.custom.html",
+                    formatted_body: message,
+                },
+                "m.relates_to": {
+                    event_id: editedEvent.getId(),
+                    rel_type: "m.replace",
+                },
+            });
+        });
+
+        it.each([EMOTE_PREFIX + "waves", "//twoSlashes"])(
+            "Should keep %s in the caption of a media message as written",
+            async (caption) => {
+                const editedEvent = mkEvent({
+                    type: "m.room.message",
+                    room: "myfakeroom",
+                    user: "myfakeuser2",
+                    content: { msgtype: "m.file", body: "notes.txt", url: "mxc://server/notes" },
+                    event: true,
+                });
+
+                const content = await createMessageContent(caption, true, { editedEvent });
+
+                expect(content["m.new_content"]).toMatchObject({ msgtype: MsgType.File, body: caption });
+            },
+        );
+
         it("Should strip the /me prefix from a message", async () => {
             const textBody = "some body text";
             const content = await createMessageContent(EMOTE_PREFIX + textBody, true, {});

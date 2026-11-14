@@ -624,6 +624,15 @@ describe("MessageContextMenu", () => {
             expect(editButton).toBeFalsy();
         });
 
+        it("does not show edit button in the files panel, which has no editor", () => {
+            const eventContent = { msgtype: "m.image", body: "image.png", url: "mxc://server/image" };
+            vi.mocked(canEditContent).mockReturnValue(true);
+
+            createRightClickMenuWithContent(eventContent, { timelineRenderingType: TimelineRenderingType.File });
+            const editButton = document.querySelector('li[aria-label="Edit"]');
+            expect(editButton).toBeFalsy();
+        });
+
         it("shows reply button when we can reply", () => {
             const eventContent = createMessageEventContent("hello");
             const context = {
