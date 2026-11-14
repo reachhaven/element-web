@@ -5,7 +5,7 @@
 import { expect, type Browser, type BrowserContext, type Locator, type Page } from "@playwright/test";
 import path from "node:path";
 
-import { outputDir, type Person } from "./env";
+import { outputDir, settings, type Person } from "./env";
 import { recording, recordingSaved } from "./steps";
 
 export type Session = {
@@ -63,4 +63,23 @@ export const closeSession = async (session: Session): Promise<void> => {
     await video.saveAs(path.resolve(outputDir, file));
     await video.delete();
     recordingSaved(session.person.key, file);
+};
+
+export const openSessions = async (browser: Browser): Promise<[Session, Session]> => {
+    const [personA, personB] = settings.people;
+    const a = await openSession(browser, personA);
+    const b = await openSession(browser, personB);
+    return [a, b];
+};
+
+export const closeSessions = async (...sessions: (Session | undefined)[]): Promise<void> => {
+    let failure: { error: unknown } | undefined;
+    for (const session of sessions) {
+        try {
+            if (session) await closeSession(session);
+        } catch (error) {
+            failure ??= { error };
+        }
+    }
+    if (failure) throw failure.error;
 };

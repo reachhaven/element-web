@@ -2,27 +2,33 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
 
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { clientConfig } from "../src/client-config";
 import {
+    acceptInvitation,
     arrives,
     attach,
     closeDialog,
     closeRightPanel,
     composer,
+    createRoom,
     dialog,
+    findInRoomList,
     findPerson,
+    findSpace,
     focusComposer,
     formattingButton,
     gifButton,
     homeButton,
     invitationItem,
+    invitePerson,
     mentionQuery,
     messageAction,
     messageTile,
     moreOptions,
     openRoom,
+    openSpaceMenu,
     react,
     reaction,
     readBy,
@@ -33,7 +39,7 @@ import {
     say,
     scrollBackTo,
     sendButton,
-    showInvites,
+    showSpace,
     spaceButton,
     openNewMenu,
     startFromRoomList,
@@ -47,16 +53,8 @@ import {
 } from "../src/element";
 import { settings } from "../src/env";
 import { mediaFile } from "../src/media";
-import { closeSession, openSession, type Session } from "../src/session";
-import {
-    confirmIdentity,
-    hasRecovery,
-    knownRecoveryKey,
-    resetIdentity,
-    setUpRecovery,
-    signIn,
-    signOut,
-} from "../src/sign-in";
+import { closeSessions, openSessions, type Session } from "../src/session";
+import { signInAndSecure, signOut } from "../src/sign-in";
 import { step } from "../src/steps";
 
 test.describe.configure({ mode: "serial" });
@@ -96,60 +94,13 @@ let space = settings.space;
 
 const both = (): Session[] => [a, b];
 
-const signInAndSecure = async (session: Session): Promise<void> => {
-    const arrival = await step(`${session.name} signs in`, () => signIn(session));
-    if (arrival === "confirm identity") {
-        const confirmed =
-            knownRecoveryKey(session) &&
-            (await step(`${session.name} confirms the digital identity with the recovery key`, async ({ skip }) =>
-                (await confirmIdentity(session)) ? true : skip("the stored recovery key no longer fits the account"),
-            ));
-        if (confirmed) return;
-        await step(`${session.name} resets the digital identity`, () => resetIdentity(session));
-    }
-    await step(`${session.name} creates a recovery key in the encryption settings`, async ({ skip }) => {
-        if (await hasRecovery(session.page)) {
-            await closeDialog(session.page);
-            skip("the account has a recovery key already");
-        }
-        await setUpRecovery(session);
-    });
-};
-
-const showSpace = async (page: Page): Promise<void> => {
-    await (space ? spaceButton(page, space) : homeButton(page)).click();
-};
-
-const findInRoomList = async (page: Page, item: Locator): Promise<void> => {
-    const views = [space ? spaceButton(page, space) : homeButton(page), homeButton(page)];
-    let attempt = 0;
-    await expect(async () => {
-        if (!(await item.first().isVisible())) {
-            await views[attempt++ % views.length].click();
-            await showInvites(page);
-            await expect(item.first()).toBeVisible({ timeout: 5_000 });
-        }
-    }).toPass({ timeout: 90_000 });
-};
-
-const findInvitation = async (page: Page, name: string): Promise<Locator> => {
-    const invitation = invitationItem(page, name);
-    await findInRoomList(page, invitation);
-    return invitation;
-};
-
 test.beforeAll(async ({ browser }) => {
-    a = await openSession(browser, personA);
-    b = await openSession(browser, personB);
+    [a, b] = await openSessions(browser);
 });
 
 test.afterAll(async () => {
     test.setTimeout(120_000);
-    try {
-        if (a) await closeSession(a);
-    } finally {
-        if (b) await closeSession(b);
-    }
+    await closeSessions(a, b);
 });
 
 test("1. Both sign in", async () => {
@@ -158,14 +109,13 @@ test("1. Both sign in", async () => {
 
     await step(`Both see the space ${space ?? ""}`.trim(), async ({ skip, note }) => {
         const name = space ?? skip("no organisation in the state file, so there is no space to show");
-        const title = settings.spaceTitle;
-        for (const { page } of both()) {
-            const named = title ? spaceButton(page, name).or(spaceButton(page, title)) : spaceButton(page, name);
-            await expect(named).toBeVisible({ timeout: 120_000 });
-        }
-        if (title && (await spaceButton(a.page, title).isVisible())) {
-            note(`The space is called ${title} already.`);
-            space = title;
+        const shown = await findSpace(
+            both().map(({ page }) => page),
+            name,
+        );
+        if (shown !== name) {
+            note(`The space is called ${shown} already.`);
+            space = shown;
         }
     });
 
@@ -188,9 +138,8 @@ test("2. A room for both", async () => {
         await step(naming, async ({ skip }) => {
             const title = settings.spaceTitle ?? skip(`the organisation has no name other than "${current}"`);
             if (current === title) skip(`the space is called ${title} already`);
-            await spaceButton(a.page, current).click({ button: "right" });
+            await openSpaceMenu(a.page, current);
             const settingsItem = a.page.getByRole("menuitem", { name: "Settings", exact: true });
-            await expect(a.page.getByRole("menuitem", { name: "Space home", exact: true })).toBeVisible();
             if (!(await settingsItem.isVisible())) {
                 await a.page.keyboard.press("Escape");
                 skip(`${A} may not change the settings of ${current}`);
@@ -214,7 +163,7 @@ test("2. A room for both", async () => {
 
     await step(`${A} creates the room "${room}"${space ? " in the space" : ""}`, async ({ note }) => {
         const { page } = a;
-        await showSpace(page);
+        await showSpace(page, space);
         await openNewMenu(page);
         const newRoom = page.getByRole("menuitem", { name: "New room", exact: true });
         if (space && !(await newRoom.isVisible())) {
@@ -224,30 +173,12 @@ test("2. A room for both", async () => {
             await openNewMenu(page);
         }
         await newRoom.click();
-        const create = dialog(page);
-        await typeInto(create.getByRole("textbox", { name: "Name", exact: true }), room);
-        await create.getByRole("button", { name: "Create room", exact: true }).click();
-        await expect(create).toBeHidden();
-        await expect(roomHeading(page)).toHaveText(room);
+        await createRoom(page, room);
     });
 
-    await step(`${A} invites ${B}`, async () => {
-        const { page } = a;
-        const panel = await roomInfo(page);
-        await panel.getByRole("menuitem", { name: "Invite", exact: true }).click();
-        const option = await findPerson(page, personB);
-        await option.click();
-        await submitInvite(page, "Invite");
-        await closeRightPanel(page);
-    });
+    await step(`${A} invites ${B}`, () => invitePerson(a.page, personB));
 
-    await step(`${B} accepts the invitation`, async () => {
-        const { page } = b;
-        await (await findInvitation(page, room)).click();
-        await page.getByRole("button", { name: "Accept", exact: true }).click();
-        await expect(composer(page)).toBeVisible({ timeout: 60_000 });
-        await expect(roomHeading(page)).toHaveText(room);
-    });
+    await step(`${B} accepts the invitation`, () => acceptInvitation(b.page, room, space));
 
     await step("Both see that the room is encrypted", async () => {
         for (const { page } of both()) {
@@ -552,7 +483,7 @@ test("7. Direct messages", async () => {
     await step(`${A} accepts the chat`, async ({ note }) => {
         const { page } = a;
         const invitation = invitationItem(page, B);
-        await findInRoomList(page, invitation.or(roomListItem(page, B)));
+        await findInRoomList(page, invitation.or(roomListItem(page, B)), space);
         if (await invitation.isVisible()) {
             await invitation.click();
             await page.getByRole("button", { name: "Start chatting", exact: true }).click();
@@ -583,7 +514,7 @@ test("7. Direct messages", async () => {
 test("8. Pins, a poll, search and room settings", async () => {
     await step(`Both go back to "${room}"`, async () => {
         for (const { page } of both()) {
-            await showSpace(page);
+            await showSpace(page, space);
             await openRoom(page, room);
         }
     });
@@ -685,9 +616,10 @@ test("9. Sign out and back in", async () => {
     await signInAndSecure(b);
 
     await step(`${B} reads the history`, async () => {
-        await showSpace(b.page);
+        await showSpace(b.page, space);
         await openRoom(b.page, renamed);
-        for (const earlier of [text.answer, text.hello]) await scrollBackTo(b.page, messageTile(timeline(b.page), earlier));
+        for (const earlier of [text.answer, text.hello])
+            await scrollBackTo(b.page, messageTile(timeline(b.page), earlier));
     });
 
     await step(`${B} writes again`, async () => {

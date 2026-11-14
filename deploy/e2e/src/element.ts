@@ -39,6 +39,25 @@ export const spaceButton = (page: Page, name: string): Locator =>
 
 export const homeButton = (page: Page): Locator => spacePanel(page).getByRole("button", { name: "Home", exact: true });
 
+export const showSpace = async (page: Page, space?: string): Promise<void> => {
+    await (space ? spaceButton(page, space) : homeButton(page)).click();
+};
+
+export const openSpaceMenu = async (page: Page, space: string): Promise<void> => {
+    await spaceButton(page, space).click({ button: "right" });
+    await expect(page.getByRole("menuitem", { name: "Space home", exact: true })).toBeVisible();
+};
+
+/** Waits until every page lists the space, under its own name or the organisation's, and answers the name shown. */
+export const findSpace = async (pages: Page[], space: string): Promise<string> => {
+    const title = settings.spaceTitle;
+    for (const page of pages) {
+        const named = title ? spaceButton(page, space).or(spaceButton(page, title)) : spaceButton(page, space);
+        await expect(named).toBeVisible({ timeout: 120_000 });
+    }
+    return title && (await spaceButton(pages[0], title).isVisible()) ? title : space;
+};
+
 const leftPanel = (page: Page): Locator => page.getByRole("navigation", { name: "Room list", exact: true });
 
 export const roomListItem = (page: Page, room: string): Locator =>
@@ -55,6 +74,24 @@ export const showInvites = async (page: Page): Promise<void> => {
     }
 };
 
+export const findInRoomList = async (page: Page, item: Locator, space?: string): Promise<void> => {
+    const views = [space ? spaceButton(page, space) : homeButton(page), homeButton(page)];
+    let attempt = 0;
+    await expect(async () => {
+        if (!(await item.first().isVisible())) {
+            await views[attempt++ % views.length].click();
+            await showInvites(page);
+            await expect(item.first()).toBeVisible({ timeout: 5_000 });
+        }
+    }).toPass({ timeout: 90_000 });
+};
+
+export const findInvitation = async (page: Page, room: string, space?: string): Promise<Locator> => {
+    const invitation = invitationItem(page, room);
+    await findInRoomList(page, invitation, space);
+    return invitation;
+};
+
 export const openNewMenu = async (page: Page): Promise<void> => {
     await leftPanel(page)
         .getByLabel("Room options", { exact: true })
@@ -66,6 +103,19 @@ export const openNewMenu = async (page: Page): Promise<void> => {
 export const startFromRoomList = async (page: Page, item: "Start chat" | "New room"): Promise<void> => {
     await openNewMenu(page);
     await page.getByRole("menuitem", { name: item, exact: true }).click();
+};
+
+/** Fills in the open dialog for a new room, with its visibility when one is given, and creates the room. */
+export const createRoom = async (page: Page, room: string, visibility?: string): Promise<void> => {
+    const create = dialog(page);
+    await typeInto(create.getByRole("textbox", { name: "Name", exact: true }), room);
+    if (visibility) {
+        await create.getByRole("button", { name: "Room visibility", exact: true }).click();
+        await create.getByRole("option", { name: visibility, exact: true }).click();
+    }
+    await create.getByRole("button", { name: "Create room", exact: true }).click();
+    await expect(create).toBeHidden();
+    await expect(roomHeading(page)).toHaveText(room);
 };
 
 export const roomHeader = (page: Page): Locator => page.locator("header.mx_RoomHeader");
@@ -113,6 +163,16 @@ export const openRoom = async (page: Page, room: string): Promise<void> => {
 
 export const timeline = (page: Page): Locator => page.locator(".mx_RoomView_body");
 
+/** The tile of an event in the room's timeline, or the folded summary of membership changes that holds it. */
+export const timelineEvent = (page: Page, eventId: string): Locator =>
+    timeline(page)
+        .locator(`[data-event-id="${eventId}"]`)
+        .or(
+            timeline(page)
+                .locator(`.mx_GenericEventListSummary[data-scroll-tokens*="${eventId}"]`)
+                .filter({ has: page.locator('.mx_GenericEventListSummary_toggle[aria-expanded="false"]') }),
+        );
+
 export const threadPanel = (page: Page): Locator => rightPanel(page);
 
 export const messageTile = (scope: Locator, text: string): Locator =>
@@ -156,8 +216,7 @@ const composerArea = (page: Page, where: "room" | "thread" = "room"): Locator =>
     scope(page, where).getByRole("region", { name: "Message composer", exact: true });
 
 /** The composer's GIF search button (gif-picker), present when the configuration sets `gif_provider`. */
-export const gifButton = (page: Page): Locator =>
-    composerArea(page).getByRole("button", { name: "GIF", exact: true });
+export const gifButton = (page: Page): Locator => composerArea(page).getByRole("button", { name: "GIF", exact: true });
 
 export const focusComposer = async (page: Page, where: "room" | "thread" = "room"): Promise<Locator> => {
     const field = composer(page, where);
@@ -254,19 +313,68 @@ export const findPerson = async (page: Page, person: Person): Promise<Locator> =
 
 export const submitInvite = async (page: Page, button: "Invite" | "Go"): Promise<void> => {
     const invite = inviteDialog(page);
-    const warning = page.getByRole("dialog").filter({
-        has: page.getByRole("heading", { name: /^(Invite new contacts to this chat|Start a chat with)/ }),
-    });
+    const confirmation = (heading: RegExp): Locator =>
+        page.getByRole("dialog").filter({ has: page.getByRole("heading", { name: heading }) });
+    const newContacts = confirmation(/^(Invite new contacts to this chat|Start a chat with)/);
+    const unknownProfiles = confirmation(/^The following users may not exist$/);
     await invite.getByRole("button", { name: button, exact: true }).click();
     await expect(async () => {
-        if (await warning.isVisible()) {
-            await warning.getByRole("button", { name: button === "Go" ? "Continue" : "Invite", exact: true }).click();
+        if (await newContacts.isVisible()) {
+            await newContacts
+                .getByRole("button", { name: button === "Go" ? "Continue" : "Invite", exact: true })
+                .click();
         }
-        await expect(invite.or(warning)).toHaveCount(0, { timeout: 2_000 });
+        if (await unknownProfiles.isVisible()) {
+            await unknownProfiles.getByRole("button", { name: "Invite anyway", exact: true }).click();
+        }
+        await expect(invite.or(newContacts).or(unknownProfiles)).toHaveCount(0, { timeout: 2_000 });
     }).toPass({ timeout: 60_000 });
+};
+
+export const invitePerson = async (page: Page, person: Person): Promise<void> => {
+    const panel = await roomInfo(page);
+    await panel.getByRole("menuitem", { name: "Invite", exact: true }).click();
+    const option = await findPerson(page, person);
+    await option.click();
+    await submitInvite(page, "Invite");
+    await closeRightPanel(page);
+};
+
+export const acceptInvitation = async (page: Page, room: string, space?: string): Promise<void> => {
+    await (await findInvitation(page, room, space)).click();
+    await page.getByRole("button", { name: "Accept", exact: true }).click();
+    await expect(composer(page)).toBeVisible({ timeout: 60_000 });
+    await expect(roomHeading(page)).toHaveText(room);
+};
+
+/** Invites a user by Matrix ID from the room's member list. */
+export const inviteByUserId = async (page: Page, userId: string): Promise<void> => {
+    const panel = await roomInfo(page);
+    await panel.getByRole("menuitem", { name: "People", exact: true }).click();
+    await panel.getByRole("button", { name: "Invite", exact: true }).click();
+    const field = inviteDialog(page).getByRole("textbox", { name: "Search", exact: true });
+    await typeInto(field, userId);
+    await field.press("Enter");
+    await expect(field).toHaveValue("");
+    await submitInvite(page, "Invite");
+    await closeRightPanel(page);
 };
 
 export const suggestion = (page: Page, person: Person): Locator =>
     withMatrixId(composerArea(page).getByRole("option", { name: person.displayName }), person);
+
+export const userSuggestion = (page: Page, userId: string): Locator =>
+    composerArea(page).getByRole("option").filter({ hasText: userId });
+
+/** Mentions a user through the composer's suggestions for the query and sends the mention followed by the text. */
+export const mentionAndSend = async (page: Page, query: string, userId: string, text: string): Promise<void> => {
+    await write(page, query);
+    await userSuggestion(page, userId).first().click();
+    const field = composer(page);
+    await field.press("End");
+    await field.pressSequentially(` ${text}`, settings.typing);
+    await field.press("Enter");
+    await expect(field).toHaveText("");
+};
 
 export const mentionQuery = (person: Person): string => `@${person.displayName.slice(0, 3)}`;

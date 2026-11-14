@@ -14,10 +14,12 @@ provider's; names marked (upload-caption) and (gif-picker) come from the fork's 
 
 A production build has fewer `data-testid` attributes than upstream's Playwright suite sees: when webpack minifies, it
 runs `babel-plugin-jsx-remove-data-test-id` over `apps/web`, so only the test ids of `packages/shared-components` stay.
-The suite uses those (`event-tile`, `event-tile-slot-*`, `toast-buttons`) and three selectors that upstream's suite uses
-too: `header.mx_RoomHeader` for the room header, `.mx_RoomView_body` for the room's timeline and composer (as opposed
-to the thread's in the right panel), and `#mx_RightPanel`. Some strings carry the app's name (`%(brand)s`); the suite
-never matches that part.
+The suite uses those (`event-tile`, `event-tile-slot-*`, `toast-buttons`) and selectors that upstream's suite uses too:
+`header.mx_RoomHeader` for the room header, `.mx_RoomView_body` for the room's timeline and composer (as opposed to the
+thread's in the right panel), `#mx_RightPanel`, and, to find an event by its ID, `data-event-id` on its tile or, while a
+run of membership changes is folded into one line, `data-scroll-tokens` on that line's `.mx_GenericEventListSummary`,
+whose `.mx_GenericEventListSummary_toggle` then has `aria-expanded="false"`. Some strings carry the app's name
+(`%(brand)s`); the suite never matches that part.
 
 ## Sign-in and recovery
 
@@ -61,9 +63,11 @@ in the way.
 | Room list sections     | treegrid with gridcell | `Room list`; sections such as `Toggle Invites section…`, with `aria-expanded`; the invitations are folded away at first                                                                      |
 | Room in the list       | button                 | `Open room <name>`, `Open room <name> with <count> unread message(s).`, `Open room <name> invitation.`; a direct chat is named after the other person                                        |
 | Search (Ctrl+K)        | dialog                 | `Search Dialog`, textbox `Search`, results are options named after the rooms                                                                                                                 |
-| New room               | dialog                 | textbox `Name`; button `Create room`; with a space selected the room goes into it                                                                                                            |
+| Add to a space         | menuitem               | `Room` under `Add` in the space context menu, for someone who may add rooms to the space; it opens the dialog for a new room in the space                                                    |
+| New room               | dialog                 | textbox `Name`; button `Create room`; with a space selected the room goes into it; button `Room visibility`, whose `Standard` is the default in a space that is not public                   |
 | Invitation or new chat | dialog                 | `Invite to <room>` or `Direct Messages`; textbox `Search`; listbox `Suggestions` with options named after the people, their Matrix ID in the text; buttons `Invite` or `Go`                  |
-| First contact          | dialog with heading    | `Invite new contacts to this chat?` (button `Invite`) or `Start a chat with this new contact?` (button `Continue`)                                                                           |
+| Invite by Matrix ID    | textbox                | `Search` in `Invite to <room>`; Enter turns the Matrix ID typed there into a pill, also when no option shows it                                                                              |
+| First contact          | dialog with heading    | `Invite new contacts to this chat?` (button `Invite`) or `Start a chat with this new contact?` (button `Continue`); `The following users may not exist` (button `Invite anyway`)             |
 | Invitation preview     | button                 | `Accept` for a room, `Start chatting` for a direct chat                                                                                                                                      |
 
 ## Room
@@ -73,8 +77,10 @@ in the way.
 | Header                     | heading (level 1)    | the room name; buttons `Video call`, `Voice call`, `Threads`, `Room info`                                                                              |
 | Right panel                | `#mx_RightPanel`     | button `Close`                                                                                                                                         |
 | Room info                  | menuitem             | `Invite`, `People`, `Threads`, `Settings`, …; the badge text `Encrypted`; a search field with the placeholder `Search messages…`; the topic            |
+| Member list                | button               | `Invite`, above the members that `People` lists                                                                                                        |
 | Room settings              | dialog               | `Room Settings - <name>`; textboxes `Room Name`, `Room Topic`; button `Save`, disabled again once saved                                                |
-| Timeline                   | listitem             | each event, with `data-testid="event-tile"` and the slots `event-tile-slot-body`, `-replyChain` and `-threadInfo`                                      |
+| Timeline                   | listitem             | each event, with `data-testid="event-tile"`, its ID in `data-event-id`, and the slots `event-tile-slot-body`, `-replyChain` and `-threadInfo`          |
+| Membership changes         | text                 | `<name> rejected the invitation`, `joined the room`, `left the room`; three or more in a row fold into a line like `<name> was invited and joined`     |
 | Newer messages below       | button               | `Scroll to most recent messages`; while the timeline is scrolled up, Element does not render the newest events                                         |
 | Message actions (on hover) | toolbar              | `Message actions`: `React`, `Reply`, `Reply in thread`, `Options`, and `Pin` and `Edit` on text messages; `Hide` and `Download` on media               |
 | Reaction picker            | toolbar              | `Quick Reactions`, with checkboxes named after the emoji, variation selector included (`👍️`)                                                           |
@@ -91,18 +97,18 @@ in the way.
 
 ## Composer
 
-| Where               | Role     | Name                                                                                                                                    |
-| ------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Composer area       | region   | `Message composer`, the room's in `.mx_RoomView_body` and the thread's in the right panel                                               |
-| Rich text composer  | textbox  | `Message composer`, a `contenteditable` element                                                                                         |
-| Formatting bar      | button   | `Bold`, `Italic`, `Underline`, `Strikethrough`, `Bulleted list`, `Numbered list`, `Quote`, `Code`, `Code block`, `Link`                 |
-| Composer buttons    | button   | `Emoji`, `Hide formatting`, `Attachment`, `More options`; `Send message` once there is text; `GIF` (gif-picker) when the configuration sets `gif_provider` |
+| Where               | Role     | Name                                                                                                                                                                                           |
+| ------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Composer area       | region   | `Message composer`, the room's in `.mx_RoomView_body` and the thread's in the right panel                                                                                                      |
+| Rich text composer  | textbox  | `Message composer`, a `contenteditable` element                                                                                                                                                |
+| Formatting bar      | button   | `Bold`, `Italic`, `Underline`, `Strikethrough`, `Bulleted list`, `Numbered list`, `Quote`, `Code`, `Code block`, `Link`                                                                        |
+| Composer buttons    | button   | `Emoji`, `Hide formatting`, `Attachment`, `More options`; `Send message` once there is text; `GIF` (gif-picker) when the configuration sets `gif_provider`                                     |
 | Keyboard            | keys     | Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+E inline code, Ctrl+Alt+C code block (Ctrl+Shift+C on macOS; feat/composer-code-block-shortcut), Enter sends, Shift+Enter starts a new line |
-| More options        | menuitem | `Poll`, `Sticker`, `Voice Message`, `Location`                                                                                          |
-| Upload              | dialog   | textbox `Caption (optional)` (upload-caption); button `Upload`                                                                          |
-| Mention suggestions | option   | inside the composer area, named after the people, their Matrix ID in the text, after `@` and the first letters                          |
-| Poll                | dialog   | `Create poll`; textboxes `Question or topic`, `Option 1`, `Option 2`; button `Create Poll`                                              |
-| GIF search          | region   | `GIF picker`, searchbox `Search GIFs`, the GIFs are buttons named after their titles (gif-picker)                                       |
+| More options        | menuitem | `Poll`, `Sticker`, `Voice Message`, `Location`                                                                                                                                                 |
+| Upload              | dialog   | textbox `Caption (optional)` (upload-caption); button `Upload`                                                                                                                                 |
+| Mention suggestions | option   | inside the composer area, named after the people, their Matrix ID in the text, after `@` and the first letters of the name or the Matrix ID                                                    |
+| Poll                | dialog   | `Create poll`; textboxes `Question or topic`, `Option 1`, `Option 2`; button `Create Poll`                                                                                                     |
+| GIF search          | region   | `GIF picker`, searchbox `Search GIFs`, the GIFs are buttons named after their titles (gif-picker)                                                                                              |
 
 ## Behaviour the flows depend on
 
@@ -115,8 +121,10 @@ in the way.
   it from the clipboard and keeps it in `.recovery-keys.json`.
 - Every later device of the same person stops at `Confirm your digital identity` before the app shows anything else.
   With a stored key the suite takes `Use recovery key`; the history then comes back from key storage. Without one, and
-  with `E2E_ALLOW_IDENTITY_RESET=1`, it resets the identity through `Can't confirm?` and the account provider and creates
-  a new recovery key.
+  with `E2E_ALLOW_IDENTITY_RESET=1`, it resets the identity through `Can't confirm?` and the account provider and
+  creates a new recovery key. An account without any recovery key shows `Use recovery key` disabled and named
+  `This option is not available because you have not set up a recovery key`; the suite then treats a stored key as one
+  that no longer fits.
 - The message actions appear only while the pointer is over a message, so the suite hovers first.
 - An encrypted video starts with an empty source and its thumbnail: the first press of play fetches and decrypts it,
   and it may stay paused until play is pressed again.
@@ -125,3 +133,14 @@ in the way.
   can be found by name instead. Zero results without that notice fail the step.
 - Starting a direct chat with someone one has a direct chat with already opens that chat, so the other person gets no
   invitation; the suite then opens the existing chat on the other side too.
+- The app has no place to agree to bots. The bot flow changes the room's power levels so that every member may send the
+  consent event, and sends each person's consent, through the app's own Matrix client, `window.mxMatrixClientPeg.get()`.
+  It reads the bot's membership and messages there too, since a tile shows its sender's name and not always their
+  Matrix ID.
+- A homeserver that answers profile requests only between people who share a room keeps the bot's profile from the
+  person who invites it: the invitation dialog offers no option for the bot's Matrix ID, Enter turns it into a pill all
+  the same, and Element asks whether to invite someone who may not exist.
+- The rich text composer sends a mention as a link to the person's permalink, `https://matrix.to/#/<user ID>`, in
+  `formatted_body`, and no `m.mentions`. The bot flow's pings and its `leave` depend on the bot taking that link as a
+  mention, so the suite picks the bot from the mention suggestions, which turns it into such a link, rather than typing
+  its name.

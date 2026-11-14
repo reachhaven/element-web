@@ -10,6 +10,7 @@ import path from "node:path";
 import { clientConfigFile, parseClientConfig } from "./client-config";
 import { outputDir, settings, suiteDir } from "./env";
 import { generatedMediaDir } from "./media";
+import { saveLog } from "./steps";
 
 const readClientConfig = async (config: FullConfig): Promise<void> => {
     const { launchOptions, ignoreHTTPSErrors } = config.projects[0]?.use ?? {};
@@ -27,7 +28,8 @@ const readClientConfig = async (config: FullConfig): Promise<void> => {
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
     rmSync(outputDir, { recursive: true, force: true });
-    mkdirSync(outputDir, { mode: 0o700 });
+    mkdirSync(outputDir, { recursive: true, mode: 0o700 });
+    saveLog();
     mkdirSync(path.resolve(outputDir, "screenshots"));
     const generated = ["landscape.png", "photo.jpg", "clip.mp4", "animation.gif"];
     if (!settings.mediaDir && !generated.every((file) => existsSync(path.resolve(generatedMediaDir, file)))) {

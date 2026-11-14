@@ -123,19 +123,19 @@ until `/brand/config.json` sets them.
 
 ## End-to-end suite
 
-`deploy/e2e` drives the app in Chromium as two people, each in a browser context of their own, records both and
-writes every step with its time, its status and a screenshot of each person to `output/steps.json`. It finds Element's
-widgets by role and accessible name, which `deploy/e2e/locators.md` lists, and names no deployment and no identity
-provider: the people, their organisation and the app's URL come from a state file or the environment, and a deployment
-that signs in through its own provider passes a login module. The suite has its own `package.json` outside the pnpm
-workspace and installs with npm. It expects the build of `staging/web`: the upload dialog's caption field comes from
-`feat/upload-caption`, and the GIF search from `feat/gif-picker`.
+`deploy/e2e` drives the app in Chromium as two people, each in a browser context of their own, records both and writes
+every step with its time, its status and a screenshot of each person to `steps.json` in its output directory, `output`
+by default. It finds Element's widgets by role and accessible name, which `deploy/e2e/locators.md` lists, and names no
+deployment and no identity provider: the people, their organisation and the app's URL come from a state file or the
+environment, and a deployment that signs in through its own provider passes a login module. The suite has its own
+`package.json` outside the pnpm workspace and installs with npm. It expects the build of `staging/web`: the upload
+dialog's caption field comes from `feat/upload-caption`, and the GIF search from `feat/gif-picker`.
 
 ```sh
 cd deploy/e2e
 npm ci && npx playwright install chromium
 E2E_BASE_URL=https://chat.example.org E2E_STATE_FILE=/path/state.json \
-    E2E_PROVIDER_LOGIN=/path/login.mjs E2E_MEDIA_DIR=/path/media npx playwright test
+    E2E_PROVIDER_LOGIN=/path/login.mjs E2E_MEDIA_DIR=/path/media npx playwright test tests/chat.spec.ts
 E2E_TITLE='Chat, end to end' ./assemble.sh
 ```
 
@@ -147,6 +147,23 @@ image with a caption, a JPEG, a video that plays, a GIF file and, when the app's
 GIF from the search; a direct chat with a picture; a pin, a poll, a search and a new room name and topic; and the second
 person signs out, signs in again, confirms the new device with the recovery key and reads the history. A step the app
 cannot do is skipped and `steps.json` gives the reason; a step that took another way than the usual one carries a note.
+
+`tests/bots.spec.ts` records the bots of a deployment that gives each person a bot, which joins a room only when every
+member agrees. It runs when `E2E_BOT_LOCALPART_PREFIX` and `E2E_BOT_CONSENT_EVENT_TYPE` are set and the state file names
+the space: both sign in; the first person creates a private room from the space's own menu and invites the second; the
+first person agrees to their bot and invites it, and the bot declines while the second person has not agreed; once both
+have agreed, the bot joins and posts a message; a mention of the bot with `ping`, from either person, gets `pong`; the
+bot leaves when the second person withdraws, and, invited back, when the first person mentions it with `leave`. The app
+has no place to agree to bots, so the suite changes the room's power levels and sends each person's consent through the
+app's own Matrix client. It checks that both people see the bot's messages and that they come from the bot; of what the
+bot says it checks only `pong`, since the rest is the deployment's.
+
+```sh
+E2E_BOT_LOCALPART_PREFIX=bot- E2E_BOT_CONSENT_EVENT_TYPE=org.example.bot_consent E2E_OUTPUT_DIR=output-bots \
+    E2E_BASE_URL=https://chat.example.org E2E_STATE_FILE=/path/state.json \
+    E2E_PROVIDER_LOGIN=/path/login.mjs npx playwright test tests/bots.spec.ts
+E2E_OUTPUT_DIR=output-bots E2E_OUTPUT_NAME=bot-interactions.mp4 E2E_TITLE='Bots in the chat' ./assemble.sh
+```
 
 The accounts must be new, or their recovery keys must be in `deploy/e2e/.recovery-keys.json` from an earlier run;
 `E2E_ALLOW_IDENTITY_RESET=1` lets the suite reset the digital identity of an account it has no fitting key for. Every
@@ -165,17 +182,22 @@ run needs a room name that no room of the two people has yet, and with `E2E_ROOM
 | `E2E_TITLE`                                            | the title card of the assembled video                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `E2E_PAUSE_MS`, `E2E_TYPING_DELAY_MS`                  | the pace of the recording: 800 ms between steps and 35 ms per key by default                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `E2E_FONT`                                             | the font of the captions in `assemble.sh`, `Sans` by default                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `E2E_BOT_LOCALPART_PREFIX`                             | the localpart prefix of the people's bots: the bot of `@<localpart>:<server>` is `@<prefix><localpart>:<server>`. The bot flow runs only with this and `E2E_BOT_CONSENT_EVENT_TYPE`                                                                                                                                                                                                                                                                                                                            |
+| `E2E_BOT_CONSENT_EVENT_TYPE`                           | the type of the state event in which a member agrees to bots in a room, with the member's user ID as state key and `{ "bots": [<user IDs>] }` as content                                                                                                                                                                                                                                                                                                                                                       |
+| `E2E_OUTPUT_DIR`                                       | the directory a run writes to and `assemble.sh` reads, `output` by default. A relative path counts from `deploy/e2e` and begins with `output`, which git ignores. Every run empties it first, so the suite refuses one that holds files but no `steps.json`                                                                                                                                                                                                                                                    |
+| `E2E_OUTPUT_NAME`                                      | the video `assemble.sh` writes into the output directory, `end-to-end.mp4` by default                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
-`deploy/e2e/output` then holds `person-a.webm` and `person-b.webm`, `steps.json`, the screenshots, the accessibility
-tree of both pages for a step that failed under `aria`, the app's `config.json` as `client-config.json`, a trace per flow
-under `test-results` and the HTML report under `report`. The traces hold the people's access tokens and recovery keys,
-so the suite creates `output` readable by its owner only; the recordings and screenshots show the recovery key blurred.
-`assemble.sh` puts both recordings side by side with a caption per step, a title card and an end card into
-`end-to-end.mp4`; it needs ffmpeg with libfreetype and fontconfig, and jq. Playwright begins a recording with the first
-frame its page paints, so the suite gives each page an empty document as soon as it opens it, and both recordings start
-with the run. The recovery key each person creates is kept in `deploy/e2e/.recovery-keys.json` (mode 0600), so that a
-later run against the same accounts can confirm their new devices. The suite reads the app's `config.json` through the
-browser, since names under `.localhost` resolve there and not in Node.
+The output directory then holds `person-a.webm` and `person-b.webm`, `steps.json`, the screenshots, the accessibility
+tree of both pages for a step that failed under `aria`, the app's `config.json` as `client-config.json`, a trace per
+flow under `test-results` and the HTML report under `report`. The traces hold the people's access tokens and recovery
+keys, so the suite creates the output directory readable by its owner only; the recordings and screenshots show the
+recovery key blurred. `assemble.sh` puts both recordings side by side with a caption per step, a title card and an end
+card into `end-to-end.mp4`, or `E2E_OUTPUT_NAME`; it needs ffmpeg with libfreetype and fontconfig, and jq. A run records
+the two people once, so each spec runs on its own, into an output directory of its own. Playwright begins a recording
+with the first frame its page paints, so the suite gives each page an empty document as soon as it opens it, and both
+recordings start with the run. The recovery key each person creates is kept in `deploy/e2e/.recovery-keys.json` (mode
+0600), so that a later run against the same accounts can confirm their new devices. The suite reads the app's
+`config.json` through the browser, since names under `.localhost` resolve there and not in Node.
 
 # Branches
 

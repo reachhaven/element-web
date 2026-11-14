@@ -12,6 +12,7 @@ import { z } from "zod";
 import { closeDialog, dialog, openUserSettings, userMenu } from "./element";
 import { settings, suiteDir, type Person } from "./env";
 import type { Session } from "./session";
+import { step } from "./steps";
 
 type ProviderLogin = { loginThroughProvider: (page: Page, person: Person) => Promise<void> };
 
@@ -128,7 +129,14 @@ export const confirmIdentity = async (session: Session): Promise<boolean> => {
     const { page, person } = session;
     const key = knownRecoveryKey(session);
     if (!key) throw resetRefused(person, `${keysFile} holds no recovery key of it`);
-    await page.getByRole("button", { name: "Use recovery key", exact: true }).click();
+    const useKey = page.getByRole("button", { name: "Use recovery key", exact: true });
+    const noKey = page.getByRole("button", {
+        name: "This option is not available because you have not set up a recovery key",
+        exact: true,
+    });
+    await expect(useKey.or(noKey)).toBeVisible();
+    if (await noKey.isVisible()) return false;
+    await useKey.click();
     const enterKey = dialog(page);
     await expect(enterKey.getByRole("heading", { name: "Enter your recovery key", exact: true })).toBeVisible();
     await enterKey.getByPlaceholder("Recovery key", { exact: true }).fill(key);
@@ -180,4 +188,24 @@ export const signOut = async (session: Session): Promise<void> => {
         .getByRole("button", { name: /^(Remove this device|Continue to remove this device)$/ })
         .click();
     await expect(userMenu(page)).toBeHidden({ timeout: 60_000 });
+};
+
+export const signInAndSecure = async (session: Session): Promise<void> => {
+    const arrival = await step(`${session.name} signs in`, () => signIn(session));
+    if (arrival === "confirm identity") {
+        const confirmed =
+            knownRecoveryKey(session) &&
+            (await step(`${session.name} confirms the digital identity with the recovery key`, async ({ skip }) =>
+                (await confirmIdentity(session)) ? true : skip("the stored recovery key no longer fits the account"),
+            ));
+        if (confirmed) return;
+        await step(`${session.name} resets the digital identity`, () => resetIdentity(session));
+    }
+    await step(`${session.name} creates a recovery key in the encryption settings`, async ({ skip }) => {
+        if (await hasRecovery(session.page)) {
+            await closeDialog(session.page);
+            skip("the account has a recovery key already");
+        }
+        await setUpRecovery(session);
+    });
 };

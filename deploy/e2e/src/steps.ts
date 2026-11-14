@@ -7,7 +7,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 
-import { outputDir, settings } from "./env";
+import { outputDir, settings, stepsFile } from "./env";
 
 type Entry = {
     flow: string;
@@ -34,7 +34,7 @@ const crashed = new Set<Page>();
 const minimumStepMs = 2000;
 const skippedStepMs = 2500;
 
-const save = (): void => writeFileSync(path.resolve(outputDir, "steps.json"), `${JSON.stringify(log, null, 2)}\n`);
+export const saveLog = (): void => writeFileSync(stepsFile, `${JSON.stringify(log, null, 2)}\n`);
 
 const slug = (text: string): string =>
     text
@@ -44,16 +44,19 @@ const slug = (text: string): string =>
         .slice(0, 48);
 
 export const recording = (video: Video, page: Page): void => {
+    if (log.videos.some(({ person }) => person === video.person)) {
+        throw new Error(`${video.name} is recorded already: a run records each person once, so run one spec at a time`);
+    }
     log.videos.push(video);
     witnesses.push({ person: video.person, page });
     page.on("crash", () => crashed.add(page));
-    save();
+    saveLog();
 };
 
 export const recordingSaved = (person: string, file: string): void => {
     const video = log.videos.find((entry) => entry.person === person);
     if (video) video.file = file;
-    save();
+    saveLog();
 };
 
 const pause = (ms: number): Promise<void> => setTimeout(ms);
@@ -97,7 +100,7 @@ export const step = <T>(title: string, body: (control: StepControl) => Promise<T
     test.step(title, async (info) => {
         const entry: Entry = { flow: test.info().title, title, at: Date.now(), status: "passed", screenshots: [] };
         log.steps.push(entry);
-        save();
+        saveLog();
         const number = String(log.steps.length).padStart(3, "0");
         const control: StepControl = {
             skip: (reason) => {
@@ -109,7 +112,7 @@ export const step = <T>(title: string, body: (control: StepControl) => Promise<T
             note: (text) => {
                 entry.note = entry.note ? `${entry.note} ${text}` : text;
                 test.info().annotations.push({ type: "note", description: `${title}: ${text}` });
-                save();
+                saveLog();
             },
         };
         let outcome: { value: T } | { error: unknown };
@@ -124,7 +127,7 @@ export const step = <T>(title: string, body: (control: StepControl) => Promise<T
         }
         entry.end = Date.now();
         const screenshotError = await takeScreenshots(entry, number);
-        save();
+        saveLog();
         const floor = entry.status === "skipped" ? skippedStepMs : minimumStepMs;
         await pause(Math.max(settings.pauseMs, floor - (Date.now() - entry.at)));
         if ("error" in outcome) throw outcome.error;

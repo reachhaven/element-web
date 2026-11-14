@@ -4,13 +4,19 @@
 # SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
 
 # Joins the two recordings of a run side by side, captions each step from
-# steps.json and adds a title card and an end card: <output>/end-to-end.mp4.
+# steps.json and adds a title card and an end card. Reads the run from the
+# directory given, else from E2E_OUTPUT_DIR as the suite reads it, else from
+# output, and writes end-to-end.mp4 there, or the file E2E_OUTPUT_NAME names.
 # Needs ffmpeg with libfreetype and fontconfig, and jq.
 #
-#   E2E_TITLE='Title card text' deploy/e2e/assemble.sh [output dir]
+#   E2E_TITLE='Title card text' E2E_OUTPUT_NAME=video.mp4 deploy/e2e/assemble.sh [output dir]
 set -eu
 
-out=$(cd "${1:-$(dirname "$0")/output}" && pwd)
+if [ -n "${1:-}" ]; then
+    out=$(CDPATH='' cd -- "$1" && pwd)
+else
+    out=$(CDPATH='' cd -- "$(dirname "$0")" && CDPATH='' cd -- "${E2E_OUTPUT_DIR:-output}" && pwd)
+fi
 steps="$out/steps.json"
 [ -f "$steps" ] || {
     echo "assemble: $steps not found, run the suite first" >&2
@@ -22,6 +28,7 @@ videos=$(jq '.videos | length' "$steps")
     exit 1
 }
 title="${E2E_TITLE:-$(jq -r '.title // "End-to-end run"' "$steps")}"
+video="$out/${E2E_OUTPUT_NAME:-end-to-end.mp4}"
 font="${E2E_FONT:-Sans}"
 background=black
 tmp=$(mktemp -d)
@@ -101,5 +108,5 @@ filters="$tmp/filters.txt"
 
 ffmpeg -loglevel error -y -i "$out/$(jq -r '.videos[0].file' "$steps")" -i "$out/$(jq -r '.videos[1].file' "$steps")" \
     -filter_complex_script "$filters" -map '[out]' \
-    -c:v libx264 -preset veryfast -crf 22 -pix_fmt yuv420p -movflags +faststart "$out/end-to-end.mp4"
-echo "assemble: $out/end-to-end.mp4"
+    -c:v libx264 -preset veryfast -crf 22 -pix_fmt yuv420p -movflags +faststart "$video"
+echo "assemble: $video"
