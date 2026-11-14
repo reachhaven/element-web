@@ -20,6 +20,7 @@ import {
     KEYBOARD_SHORTCUTS,
     type KeyboardShortcutSetting,
     MAC_ONLY_SHORTCUTS,
+    WYSIWYG_COMPOSER_SHORTCUTS,
 } from "./KeyboardShortcuts";
 
 /**
@@ -142,6 +143,9 @@ export const getKeyboardShortcuts = (): IKeyboardShortcuts => {
             if (getSettingDisabled(KEYBOARD_SHORTCUTS[k]?.controller)) return false;
             if (MAC_ONLY_SHORTCUTS.includes(k) && !IS_MAC) return false;
             if (DESKTOP_SHORTCUTS.includes(k) && !overrideBrowserShortcuts) return false;
+            if (WYSIWYG_COMPOSER_SHORTCUTS.includes(k) && !SettingsStore.getValue("feature_wysiwyg_composer")) {
+                return false;
+            }
 
             return true;
         })

@@ -8,13 +8,14 @@ Please see LICENSE files in the repository root for full details.
 
 // @vitest-environment happy-dom
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render } from "test-utils-rtl";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { render, screen } from "test-utils-rtl";
 import { mockPlatformPeg } from "test-utils";
 import React from "react";
 
 import KeyboardUserSettingsTab from "./KeyboardUserSettingsTab";
 import { Key } from "../../../../../Keyboard";
+import SettingsStore from "../../../../../settings/SettingsStore";
 
 const PATH_TO_KEYBOARD_SHORTCUTS = "../../../../../accessibility/KeyboardShortcuts";
 const PATH_TO_KEYBOARD_SHORTCUT_UTILS = "../../../../../accessibility/KeyboardShortcutUtils";
@@ -47,6 +48,10 @@ describe("KeyboardUserSettingsTab", () => {
     beforeEach(() => {
         vi.resetModules();
         mockPlatformPeg();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     it("renders list of keyboard shortcuts", () => {
@@ -98,5 +103,21 @@ describe("KeyboardUserSettingsTab", () => {
 
         const body = renderKeyboardUserSettingsTab();
         expect(body).toMatchSnapshot();
+    });
+
+    it("lists the code block shortcut while the rich text editor is enabled", () => {
+        vi.spyOn(SettingsStore, "getValue").mockImplementation(
+            ((name: string) => name === "feature_wysiwyg_composer") as typeof SettingsStore.getValue,
+        );
+
+        renderKeyboardUserSettingsTab();
+
+        expect(screen.getByText("Toggle Code Block").closest("li")).toHaveTextContent("Ctrl + Alt + c");
+    });
+
+    it("leaves the code block shortcut out while the rich text editor is disabled", () => {
+        renderKeyboardUserSettingsTab();
+
+        expect(screen.queryByText("Toggle Code Block")).not.toBeInTheDocument();
     });
 });
