@@ -31,6 +31,7 @@ import { RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
 import { type MediaEventHelper } from "../../../utils/MediaEventHelper";
 import Modal from "../../../Modal";
 import ImageView from "../elements/ImageView";
+import MessageEditHistoryDialog from "../dialogs/MessageEditHistoryDialog";
 import { type UrlPreviewGroupViewModelProps } from "../../../viewmodels/message-body/UrlPreviewGroupViewModel";
 import SettingsStore from "../../../settings/SettingsStore";
 import dis from "../../../dispatcher/dispatcher";
@@ -243,6 +244,41 @@ describe("<TextualBody />", () => {
         });
 
         await waitFor(() => expect(container).toHaveTextContent("* sender waves(edited)"));
+    });
+
+    it("renders the edited caption of a media message, marked as edited, with its edit history", () => {
+        DMRoomMap.makeShared(defaultMatrixClient);
+        const createDialogSpy = vi.spyOn(Modal, "createDialog").mockReturnValue({} as never);
+
+        const image = { msgtype: "m.image", url: "mxc://server/image" };
+        const ev = mkEvent({
+            type: "m.room.message",
+            room: room1Id,
+            user: "sender",
+            content: { ...image, body: "image.png" },
+            event: true,
+        });
+        const edit = mkEvent({
+            type: "m.room.message",
+            room: room1Id,
+            user: "sender",
+            content: {
+                ...image,
+                "body": "* A sunny day",
+                "filename": "image.png",
+                "m.new_content": { ...image, body: "A sunny day", filename: "image.png" },
+                "m.relates_to": { rel_type: "m.replace", event_id: ev.getId() },
+            },
+            event: true,
+        });
+        ev.makeReplaced(edit);
+        vi.spyOn(ev, "replacingEventDate").mockReturnValue(new Date(1993, 7, 3));
+
+        const { container } = getComponent({ mxEvent: ev, replacingEventId: edit.getId() });
+
+        expect(container.querySelector(".mx_EventTile_caption")).toHaveTextContent("A sunny day(edited)");
+        fireEvent.click(screen.getByRole("button", { name: /Select to view edit history/ }));
+        expect(createDialogSpy).toHaveBeenCalledWith(MessageEditHistoryDialog, { mxEvent: ev });
     });
 
     it("renders m.notice correctly", () => {

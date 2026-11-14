@@ -18,6 +18,8 @@ import SettingsStore from "../../../../../settings/SettingsStore";
 import { parsePermalink } from "../../../../../utils/permalinks/Permalinks";
 import { addReplyToMessageContent } from "../../../../../utils/Reply";
 import { isNotNull } from "../../../../../Typeguards";
+import { MediaEventHelper } from "../../../../../utils/MediaEventHelper";
+import { createCaptionEditContent } from "../../../../../utils/messages";
 
 export const EMOTE_PREFIX = "/me ";
 
@@ -45,14 +47,16 @@ export async function createMessageContent(
     { relation, replyToEvent, editedEvent }: CreateMessageContentParams,
 ): Promise<RoomMessageEventContent> {
     const isEditing = isMatrixEvent(editedEvent);
+    // A media message is edited for its caption, which is sent as written: a leading /me does not make it an emote
+    const isEditingCaption = isEditing && MediaEventHelper.canHaveCaption(editedEvent);
 
-    const isEmote = message.startsWith(EMOTE_PREFIX);
+    const isEmote = !isEditingCaption && message.startsWith(EMOTE_PREFIX);
     if (isEmote) {
         // if we are dealing with an emote we want to remove the prefix so that `/me` does not
         // appear after the `* <userName>` text in the timeline
         message = message.slice(EMOTE_PREFIX.length);
     }
-    if (message.startsWith("//")) {
+    if (!isEditingCaption && message.startsWith("//")) {
         // if user wants to enter a single slash at the start of a message, this
         // is how they have to do it (due to it clashing with commands), so here we
         // remove the first character to make sure //word displays as /word
@@ -63,15 +67,19 @@ export async function createMessageContent(
     // BUT if we're not, the message content will be plain text where we need to convert the mentions
     const body = isHTML ? await richToPlain(message, false) : convertPlainTextToBody(message);
 
-    const content = {
-        msgtype: isEmote ? MsgType.Emote : MsgType.Text,
-        body: isEditing ? `* ${body}` : body,
-    } as RoomMessageTextEventContent & ReplacementEvent<RoomMessageTextEventContent>;
-
     // TODO markdown support
 
     const isMarkdownEnabled = SettingsStore.getValue("MessageComposerInput.useMarkdown");
     const formattedBody = isHTML ? message : isMarkdownEnabled ? await plainToRich(message, true) : null;
+
+    if (isEditingCaption) {
+        return createCaptionEditContent(editedEvent, body, formattedBody ?? undefined);
+    }
+
+    const content = {
+        msgtype: isEmote ? MsgType.Emote : MsgType.Text,
+        body: isEditing ? `* ${body}` : body,
+    } as RoomMessageTextEventContent & ReplacementEvent<RoomMessageTextEventContent>;
 
     if (formattedBody) {
         content.format = "org.matrix.custom.html";

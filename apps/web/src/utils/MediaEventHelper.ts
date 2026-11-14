@@ -155,12 +155,20 @@ export class MediaEventHelper implements IDestroyable {
     }
 
     /**
+     * Determine if the event in question is a media message, which can have a caption
+     * @returns `true` if the event is an image, file, audio (voice included) or video message, otherwise `false`.
+     */
+    public static canHaveCaption(event: MatrixEvent): boolean {
+        return MEDIA_MSG_TYPES.includes(event.getContent().msgtype!);
+    }
+
+    /**
      * Determine if the media event in question has a caption
      * @returns `true` if the event is an image, file, audio or video message with a caption, otherwise `false`.
      */
     public static hasCaption(event: MatrixEvent): boolean {
         const content = event.getContent();
-        return MEDIA_MSG_TYPES.includes(content.msgtype!) && !!content.filename && content.filename !== content.body;
+        return MediaEventHelper.canHaveCaption(event) && !!content.filename && content.filename !== content.body;
     }
 
     /**

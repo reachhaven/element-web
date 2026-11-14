@@ -16,7 +16,7 @@ import { type MessageComposerUrlPreviewSnapshot } from "@element-hq/web-shared-c
 import { type UrlPreview } from "shared-types";
 import fetchMock from "@fetch-mock/vitest";
 
-import { attachMentions, attachUrlPreviews } from "./messages";
+import { attachMentions, attachUrlPreviews, createCaptionEditContent } from "./messages";
 import EditorModel from "../editor/model";
 import { createPartCreator } from "../editor/__mocks__";
 import { type RoomMessageEventContent } from "../../@types/url-preview";
@@ -602,5 +602,155 @@ describe("attachMentions", () => {
                 "m.new_content": { "m.mentions": {} },
             });
         });
+    });
+});
+
+describe("createCaptionEditContent", () => {
+    const image = {
+        msgtype: "m.image",
+        url: "mxc://server/image",
+        info: { mimetype: "image/png", size: 1234, w: 100, h: 50 },
+    };
+
+    function mkMediaEvent(content: IContent): MatrixEvent {
+        return mkEvent({ type: "m.room.message", user: "@alice:test", room: "!abc:test", content, event: true });
+    }
+
+    it("gives a media message without a caption one, naming the file in filename", () => {
+        const event = mkMediaEvent({ ...image, body: "image.png" });
+
+        const content = createCaptionEditContent(event, "A sunny day", undefined);
+
+        expect(content).toEqual({
+            ...image,
+            "body": "* A sunny day",
+            "filename": "image.png",
+            "m.new_content": { ...image, body: "A sunny day", filename: "image.png" },
+            "m.relates_to": { rel_type: "m.replace", event_id: event.getId() },
+        });
+    });
+
+    it("sends a formatted caption in formatted_body", () => {
+        const event = mkMediaEvent({ ...image, body: "image.png" });
+
+        const content = createCaptionEditContent(event, "A *sunny* day", "A <em>sunny</em> day");
+
+        expect(content).toEqual({
+            ...image,
+            "body": "* A *sunny* day",
+            "filename": "image.png",
+            "format": "org.matrix.custom.html",
+            "formatted_body": "* A <em>sunny</em> day",
+            "m.new_content": {
+                ...image,
+                body: "A *sunny* day",
+                filename: "image.png",
+                format: "org.matrix.custom.html",
+                formatted_body: "A <em>sunny</em> day",
+            },
+            "m.relates_to": { rel_type: "m.replace", event_id: event.getId() },
+        });
+    });
+
+    it("replaces the caption and its formatting, keeping the name of the file", () => {
+        const event = mkMediaEvent({
+            ...image,
+            body: "An *old* caption",
+            filename: "image.png",
+            format: "org.matrix.custom.html",
+            formatted_body: "An <em>old</em> caption",
+        });
+
+        const content = createCaptionEditContent(event, "A new caption", undefined);
+
+        expect(content["m.new_content"]).toEqual({ ...image, body: "A new caption", filename: "image.png" });
+    });
+
+    it.each([
+        ["an empty caption", ""],
+        ["a blank caption", " \n "],
+        ["a caption that is the name of the file", " image.png "],
+    ])("takes the caption away for %s, giving the body the name of the file again", (_, caption) => {
+        const event = mkMediaEvent({
+            ...image,
+            body: "An *old* caption",
+            filename: "image.png",
+            format: "org.matrix.custom.html",
+            formatted_body: "An <em>old</em> caption",
+        });
+
+        const content = createCaptionEditContent(event, caption, "<p></p>");
+
+        expect(content).toEqual({
+            ...image,
+            "body": "* image.png",
+            "filename": "image.png",
+            "m.new_content": { ...image, body: "image.png", filename: "image.png" },
+            "m.relates_to": { rel_type: "m.replace", event_id: event.getId() },
+        });
+    });
+
+    it("keeps the encrypted file and everything else describing the media", () => {
+        const video = {
+            "msgtype": "m.video",
+            "file": {
+                url: "mxc://server/video",
+                key: { alg: "A256CTR", ext: true, k: "key", key_ops: ["encrypt", "decrypt"], kty: "oct" },
+                iv: "iv",
+                hashes: { sha256: "hash" },
+                v: "v2",
+            },
+            "info": {
+                mimetype: "video/mp4",
+                duration: 4000,
+                thumbnail_file: { url: "mxc://server/thumbnail" },
+                thumbnail_info: { mimetype: "image/jpeg" },
+            },
+            "org.example.spoiler": true,
+        };
+        const event = mkMediaEvent({ ...video, body: "clip.mp4" });
+
+        const content = createCaptionEditContent(event, "A short clip", undefined);
+
+        expect(content["m.new_content"]).toEqual({ ...video, body: "A short clip", filename: "clip.mp4" });
+    });
+
+    it("leaves out the relation, mentions and link previews of the message", () => {
+        const event = mkMediaEvent({
+            ...image,
+            "body": "See https://example.org, @bob",
+            "filename": "image.png",
+            "m.relates_to": { "m.in_reply_to": { event_id: "$parent" } },
+            "m.mentions": { user_ids: ["@bob:test"] },
+            "com.beeper.linkpreviews": [{ matched_url: "https://example.org" }],
+        });
+
+        const content = createCaptionEditContent(event, "No link any more", undefined);
+
+        expect(content["m.new_content"]).toEqual({ ...image, body: "No link any more", filename: "image.png" });
+        expect(content["m.relates_to"]).toEqual({ rel_type: "m.replace", event_id: event.getId() });
+    });
+
+    it("starts from the content of the latest edit", () => {
+        const event = mkMediaEvent({ ...image, body: "image.png" });
+        // an earlier edit, from a client which can replace the media too, gave the message another image
+        const otherImage = {
+            msgtype: "m.image",
+            url: "mxc://server/other-image",
+            info: { mimetype: "image/jpeg", size: 4321, w: 300, h: 200 },
+        };
+        const previousEdit = mkMediaEvent({
+            ...otherImage,
+            "body": "* A first caption",
+            "filename": "photo.jpg",
+            "m.new_content": { ...otherImage, body: "A first caption", filename: "photo.jpg" },
+            "m.relates_to": { rel_type: "m.replace", event_id: event.getId() },
+        });
+        event.makeReplaced(previousEdit);
+
+        const content = createCaptionEditContent(event, "A second caption", undefined);
+
+        expect(content["m.new_content"]).toEqual({ ...otherImage, body: "A second caption", filename: "photo.jpg" });
+        expect(content["m.relates_to"]).toEqual({ rel_type: "m.replace", event_id: event.getId() });
     });
 });
