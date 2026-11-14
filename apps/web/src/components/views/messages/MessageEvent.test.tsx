@@ -22,6 +22,7 @@ import MessageEvent from "./MessageEvent";
 import { RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
 import MatrixClientContext from "../../../contexts/MatrixClientContext";
 import { Mjolnir } from "../../../mjolnir/Mjolnir";
+import EditorStateTransfer from "../../../utils/EditorStateTransfer";
 
 vi.mock("./MBodyFactory", () => ({
     __esModule: true,
@@ -35,7 +36,10 @@ vi.mock("./MBodyFactory", () => ({
 
 vi.mock("./TextualBodyFactory", () => ({
     __esModule: true,
-    TextualBodyFactory: () => <div data-testid="textual-body" />,
+    // The textual body shows the editor in place of the text while the message is edited
+    TextualBodyFactory: ({ editState }: { editState?: unknown }) => (
+        <div data-testid={editState ? "textual-body-editor" : "textual-body"} />
+    ),
 }));
 
 vi.mock("./MImageReplyBody", () => ({
@@ -229,6 +233,77 @@ describe("MessageEvent", () => {
             mockMedia();
             expect(result.getByTestId("file-body")).toBeVisible();
             expect(result.getByTestId("textual-body")).toBeVisible();
+        });
+    });
+
+    describe("when the caption of a media message is edited", () => {
+        const image = {
+            msgtype: MsgType.Image,
+            url: "mxc://server/image",
+            info: { w: 40, h: 50, mimetype: "image/png" },
+        };
+
+        function createImageEvent(content: Record<string, string>): MatrixEvent {
+            return mkEvent({
+                event: true,
+                type: EventType.RoomMessage,
+                user: client.getUserId()!,
+                room: room.roomId,
+                content: { ...image, ...content },
+            });
+        }
+
+        function createEdit(original: MatrixEvent, newContent: Record<string, string>): MatrixEvent {
+            return mkEvent({
+                event: true,
+                type: EventType.RoomMessage,
+                user: client.getUserId()!,
+                room: room.roomId,
+                content: {
+                    ...image,
+                    ...newContent,
+                    "body": `* ${newContent.body}`,
+                    "m.new_content": { ...image, ...newContent },
+                    "m.relates_to": { rel_type: "m.replace", event_id: original.getId() },
+                },
+            });
+        }
+
+        it("should show the caption an edit gives the media under it", () => {
+            event = createImageEvent({ body: "image.png" });
+            event.makeReplaced(createEdit(event, { body: "A sunny day", filename: "image.png" }));
+
+            const result = renderMessageEvent();
+
+            expect(result.getByTestId("image-body")).toBeVisible();
+            expect(result.getByTestId("textual-body")).toBeVisible();
+        });
+
+        it("should show no caption once an edit takes it away", () => {
+            event = createImageEvent({ body: "A sunny day", filename: "image.png" });
+            event.makeReplaced(createEdit(event, { body: "image.png", filename: "image.png" }));
+
+            const result = renderMessageEvent();
+
+            expect(result.getByTestId("image-body")).toBeVisible();
+            expect(result.queryByTestId("textual-body")).toBeNull();
+        });
+
+        it("should show the editor for the caption under media without a caption while it is edited", () => {
+            event = createImageEvent({ body: "image.png" });
+
+            const result = render(
+                <MatrixClientContext.Provider value={client}>
+                    <MessageEvent
+                        mxEvent={event}
+                        permalinkCreator={new RoomPermalinkCreator(room)}
+                        editState={new EditorStateTransfer(event)}
+                    />
+                </MatrixClientContext.Provider>,
+            );
+
+            expect(result.getByTestId("image-body")).toBeVisible();
+            expect(result.getByTestId("textual-body-editor")).toBeVisible();
         });
     });
 });

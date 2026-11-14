@@ -634,7 +634,8 @@ export default class MessageContextMenu extends React.Component<IProps, IState> 
         }
 
         let editButton: JSX.Element | undefined;
-        if (rightClick && canEditContent(cli, mxEvent)) {
+        // The files panel has no editor: the caption of a file is edited in the timeline
+        if (rightClick && timelineRenderingType !== TimelineRenderingType.File && canEditContent(cli, mxEvent)) {
             editButton = (
                 <IconizedContextMenuOption icon={<EditIcon />} label={_t("action|edit")} onClick={this.onEditClick} />
             );

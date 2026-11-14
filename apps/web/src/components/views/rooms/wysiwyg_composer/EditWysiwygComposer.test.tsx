@@ -132,6 +132,49 @@ describe("EditWysiwygComposer", () => {
             await waitFor(() => expect(screen.getByRole("textbox")).toHaveAttribute("contentEditable", "true"));
         });
 
+        it("Should initialize empty, asking for a caption, for a media message without one", async () => {
+            // When
+            const mockEvent = mkEvent({
+                type: "m.room.message",
+                room: "myfakeroom",
+                user: "myfakeuser",
+                content: { msgtype: "m.image", body: "image.png", url: "mxc://server/image" },
+                event: true,
+            });
+            const editorStateTransfer = new EditorStateTransfer(mockEvent);
+            customRender(false, editorStateTransfer);
+            await waitFor(() => expect(screen.getByRole("textbox")).toHaveAttribute("contentEditable", "true"));
+
+            // Then
+            expect(screen.getByRole("textbox")).toHaveTextContent("");
+            expect(screen.getByRole("textbox")).toHaveClass("mx_WysiwygComposer_Editor_content_placeholder");
+            expect(screen.getByRole("textbox").style.getPropertyValue("--placeholder")).toBe('"Add a caption…"');
+        });
+
+        it("Should initialize with the caption of a media message", async () => {
+            // When
+            const mockEvent = mkEvent({
+                type: "m.room.message",
+                room: "myfakeroom",
+                user: "myfakeuser",
+                content: {
+                    msgtype: "m.image",
+                    body: "A *sunny* day",
+                    filename: "image.png",
+                    format: "org.matrix.custom.html",
+                    formatted_body: "A <em>sunny</em> day",
+                    url: "mxc://server/image",
+                },
+                event: true,
+            });
+            const editorStateTransfer = new EditorStateTransfer(mockEvent);
+            customRender(false, editorStateTransfer);
+            await waitFor(() => expect(screen.getByRole("textbox")).toHaveAttribute("contentEditable", "true"));
+
+            // Then
+            await waitFor(() => expect(screen.getByRole("textbox")).toContainHTML("A <em>sunny</em> day"));
+        });
+
         it("Should strip <mx-reply> tag from initial content", async () => {
             // When
             const mockEvent = mkEvent({
@@ -229,6 +272,48 @@ describe("EditWysiwygComposer", () => {
 
             expect(spyDispatcher).toHaveBeenCalledWith({ action: "message_sent" });
         });
+    });
+
+    it("Should send the new caption of a media message with the media on save button click", async () => {
+        // When
+        const image = { msgtype: "m.image", url: "mxc://server/image", info: { mimetype: "image/png" } };
+        const imageEvent = mkEvent({
+            type: "m.room.message",
+            room: "myfakeroom",
+            user: "myfakeuser",
+            content: { ...image, body: "image.png" },
+            event: true,
+        });
+        customRender(false, new EditorStateTransfer(imageEvent));
+        await waitFor(() => expect(screen.getByRole("textbox")).toHaveAttribute("contentEditable", "true"));
+        fireEvent.input(screen.getByRole("textbox"), {
+            data: "A sunny day",
+            inputType: "insertText",
+        });
+        await waitFor(() => expect(screen.getByText("Save")).not.toHaveAttribute("disabled"));
+        screen.getByText("Save").click();
+
+        // Then
+        await waitFor(() =>
+            expect(mockClient.sendMessage).toHaveBeenCalledWith(imageEvent.getRoomId(), null, {
+                ...image,
+                "body": "* A sunny day",
+                "filename": "image.png",
+                "format": "org.matrix.custom.html",
+                "formatted_body": "* A sunny day",
+                "m.new_content": {
+                    ...image,
+                    body: "A sunny day",
+                    filename: "image.png",
+                    format: "org.matrix.custom.html",
+                    formatted_body: "A sunny day",
+                },
+                "m.relates_to": {
+                    event_id: imageEvent.getId(),
+                    rel_type: "m.replace",
+                },
+            }),
+        );
     });
 
     describe("URL previews", () => {

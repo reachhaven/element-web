@@ -15,6 +15,7 @@ import {
     EventType,
     EventStatus,
     MatrixEventEvent,
+    RelationType,
 } from "matrix-js-sdk/src/matrix";
 import {
     type MessageComposerUrlPreviewSnapshotEntryLoaded,
@@ -28,7 +29,7 @@ import { type UnstableBundledUrlPreviewSingle, type RoomMessageEventContent } fr
 import SettingsStore from "../settings/SettingsStore";
 import { uploadFile } from "../ContentMessages";
 import { mediaFromMxc } from "../customisations/Media";
-import { type EncryptedFile } from "matrix-js-sdk/src/types";
+import { type EncryptedFile, type MediaEventContent, type ReplacementEvent } from "matrix-js-sdk/src/types";
 
 /**
  * Build the mentions information based on the editor model (and any related events):
@@ -126,6 +127,62 @@ export function attachRelation(content: IContent, relation?: IEventRelation): vo
             ...relation,
         };
     }
+}
+
+/**
+ * Creates the content of an edit which gives a media message a new caption, or takes its caption away when the new
+ * one is blank. See https://spec.matrix.org/v1.10/client-server-api/#media-captions and
+ * https://spec.matrix.org/v1.10/client-server-api/#event-replacements.
+ *
+ * The replacement content stands for the whole message, so it keeps the media and its details as the message has
+ * them now. Only the caption changes: it goes into `body`, and into `formatted_body` when it is formatted, with the
+ * name of the file in `filename`. A blank caption, or one that is the name of the file, leaves the message without
+ * a caption, and `body` holds the file name again. The mentions and link previews of the old caption go with it.
+ *
+ * @param editedEvent - The media message whose caption is edited.
+ * @param caption - The new caption, as plain text.
+ * @param formattedCaption - The new caption as HTML, if it is formatted.
+ * @returns The content of the edit, with the replacement content in `m.new_content`.
+ */
+export function createCaptionEditContent(
+    editedEvent: MatrixEvent,
+    caption: string,
+    formattedCaption: string | undefined,
+): RoomMessageEventContent {
+    const {
+        body,
+        filename,
+        "format": _format,
+        "formatted_body": _formattedBody,
+        "m.mentions": _mentions,
+        "m.relates_to": _relation,
+        "com.beeper.linkpreviews": _urlPreviews,
+        ...media
+    } = editedEvent.getContent<MediaEventContent & IContent>();
+    const fileName = filename || body;
+    const captionText = caption.trim();
+
+    const newContent: MediaEventContent = { ...media, body: fileName, filename: fileName };
+    if (captionText && captionText !== fileName) {
+        newContent.body = caption;
+        if (formattedCaption) {
+            newContent.format = "org.matrix.custom.html";
+            newContent.formatted_body = formattedCaption;
+        }
+    }
+
+    // Clients which do not understand edits show this as the media again, with its new caption marked as an edit
+    const content: MediaEventContent & Omit<ReplacementEvent<MediaEventContent>, "m.relates_to"> = {
+        ...newContent,
+        "body": `* ${newContent.body}`,
+        "m.new_content": newContent,
+    };
+    if (newContent.formatted_body) {
+        content.formatted_body = `* ${newContent.formatted_body}`;
+    }
+    attachRelation(content, { rel_type: RelationType.Replace, event_id: editedEvent.getId() });
+
+    return content as RoomMessageEventContent;
 }
 
 /*
