@@ -159,6 +159,12 @@ export interface WebConfigJson {
     help_encryption_url?: string;
     help_key_storage_url?: string;
 
+    /**
+     * URL of the source code of the deployed version, such as a tag or commit in a repository. Linked from Help & About
+     * next to the version information. Omission hides the link.
+     */
+    source_code_url?: string;
+
     latex_maths_delims?: {
         inline?: {
             left?: string;
