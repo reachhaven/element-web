@@ -22,6 +22,7 @@ import {
 import { FormattingButtons } from "./FormattingButtons";
 import * as LinkModal from "./LinkModal";
 import { setLanguage } from "../../../../../i18n/settings";
+import SettingsStore from "../../../../../settings/SettingsStore";
 
 const mockWysiwygFns = {
     bold: vi.fn(),
@@ -138,6 +139,17 @@ describe("FormattingButtons", () => {
             await userEvent.hover(screen.getByLabelText(label));
             await waitFor(() => expect(screen.getByText(label)).toBeInTheDocument());
         }
+    });
+
+    it("Should show the code block shortcut in the tooltip of the code block button", async () => {
+        vi.spyOn(SettingsStore, "getValue").mockImplementation(
+            ((name: string) => name === "feature_wysiwyg_composer") as typeof SettingsStore.getValue,
+        );
+        renderComponent();
+
+        await userEvent.hover(screen.getByLabelText("Code block"));
+
+        await waitFor(() => expect(screen.getByRole("tooltip")).toHaveTextContent("Ctrl + Alt + c"));
     });
 
     it("Each button should not display the tooltip on mouse over when disabled", async () => {

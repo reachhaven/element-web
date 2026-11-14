@@ -161,7 +161,7 @@ exports[`KeyboardUserSettingsTab > renders list of keyboard shortcuts 1`] = `
                 <li
                   class="mx_KeyboardShortcut_shortcutRow"
                 >
-                  Toggle Code Block
+                  Toggle Code
                   <div
                     class="mx_KeyboardShortcut"
                   >

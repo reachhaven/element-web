@@ -120,6 +120,11 @@ function handleKeyboardEvent(
         case KeyBindingAction.SendMessage:
             send();
             return null;
+        case KeyBindingAction.FormatCodeBlock:
+            event.preventDefault();
+            event.stopPropagation();
+            composer.actions.codeBlock();
+            return null;
         case KeyBindingAction.EditPrevMessage: {
             // Or if the caret is not at the beginning of the editor
             // Or the editor is modified
