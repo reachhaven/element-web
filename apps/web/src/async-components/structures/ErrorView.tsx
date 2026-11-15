@@ -13,6 +13,7 @@ import { LinuxIcon, MacIcon, WindowsIcon } from "@vector-im/compound-design-toke
 
 import SdkConfig from "../../SdkConfig";
 import { _t } from "../../languageHandler";
+import { getBrand } from "../../branding";
 
 // directly import the style here as this layer does not support rethemedex at this time so no matrix-react-sdk
 // PostCSS variables will be accessible.
@@ -119,7 +120,7 @@ export const UnsupportedBrowserView: React.FC<{
     onAccept?(this: void): void;
 }> = ({ onAccept }) => {
     const config = SdkConfig.get();
-    const brand = config.brand ?? "Element";
+    const brand = getBrand();
 
     const hasDesktopBuilds =
         config.desktop_builds?.available &&

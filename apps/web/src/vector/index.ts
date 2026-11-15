@@ -125,9 +125,10 @@ async function start(): Promise<void> {
         loadApp,
         loadPlugins,
         showError,
+        showConfigSyntaxError,
+        showAppLaunchError,
         showIncompatibleBrowser,
         _t,
-        extractErrorMessageFromError,
     } = await import(
         /* webpackChunkName: "init" */
         /* webpackPreload: true */
@@ -207,13 +208,7 @@ async function start(): Promise<void> {
         } catch (error) {
             // Now that we've loaded the theme (CSS), display the config syntax error if needed.
             if (error instanceof SyntaxError) {
-                // This uses the default brand since the app config is unavailable.
-                return showError(_t("error|misconfigured"), [
-                    _t("error|invalid_json"),
-                    _t("error|invalid_json_detail", {
-                        message: error.message || _t("error|invalid_json_generic"),
-                    }),
-                ]);
+                return showConfigSyntaxError(error);
             }
             return showError(_t("error|cannot_load_config"));
         }
@@ -237,10 +232,7 @@ async function start(): Promise<void> {
     } catch (err) {
         logger.error(err);
         // Like the compatibility page, AWOOOOOGA at the user
-        // This uses the default brand since the app config is unavailable.
-        await showError(_t("error|misconfigured"), [
-            extractErrorMessageFromError(err, _t("error|app_launch_unexpected_error")),
-        ]);
+        await showAppLaunchError(err);
     }
 }
 

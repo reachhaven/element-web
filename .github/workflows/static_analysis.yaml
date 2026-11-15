@@ -123,8 +123,6 @@ jobs:
                           labs|feature_matrixrtc_slots
                           labs|feature_matrixrtc_slots_description
                           voip|element_call
-                          error|invalid_json
-                          error|misconfigured
                           welcome|title_element
                           devtools|settings|elementCallUrl
                           labs|sliding_sync_description
