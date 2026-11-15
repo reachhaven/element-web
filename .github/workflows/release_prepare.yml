@@ -15,6 +15,7 @@ on:
 permissions: {} # Uses ELEMENT_BOT_TOKEN instead
 jobs:
     checks:
+        if: github.repository == 'element-hq/element-web'
         name: Sanity checks
         strategy:
             matrix:
@@ -28,6 +29,7 @@ jobs:
             repository: ${{ matrix.repo }}
 
     prepare:
+        if: github.repository == 'element-hq/element-web'
         runs-on: ubuntu-26.04
         needs: checks
         env:

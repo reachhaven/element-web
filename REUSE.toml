@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 vDL Digital Ventures
+#
+# SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+
+version = 1
+
+# The fork's files that cannot carry a header. Everything else of the fork has
+# one; the rest of the tree is upstream's, licensed as its headers and LICENSE-*
+# files say.
+[[annotations]]
+path = ["deploy/web/config.json"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 vDL Digital Ventures"
+SPDX-License-Identifier = "AGPL-3.0-only OR GPL-3.0-only"

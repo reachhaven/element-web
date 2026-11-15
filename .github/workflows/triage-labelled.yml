@@ -15,6 +15,7 @@ jobs:
         name: Add Z-Labs label for features behind labs flags
         runs-on: ubuntu-26.04
         if: >
+            github.repository == 'element-hq/element-web' && (
             contains(github.event.issue.labels.*.name, 'A-Maths') ||
             contains(github.event.issue.labels.*.name, 'A-Location-Sharing') ||
             contains(github.event.issue.labels.*.name, 'Z-IA') ||
@@ -26,6 +27,7 @@ jobs:
             contains(github.event.issue.labels.*.name, 'A-Message-Starring') ||
             contains(github.event.issue.labels.*.name, 'A-Rich-Text-Editor') ||
             contains(github.event.issue.labels.*.name, 'A-Element-Call')
+            )
         steps:
             - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
               with:
@@ -41,8 +43,10 @@ jobs:
         name: Add "Help Wanted" label to all "good first issue" and Hacktoberfest
         runs-on: ubuntu-26.04
         if: >
+            github.repository == 'element-hq/element-web' && (
             contains(github.event.issue.labels.*.name, 'good first issue') ||
             contains(github.event.issue.labels.*.name, 'Hacktoberfest')
+            )
         steps:
             - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
               with:
@@ -58,7 +62,9 @@ jobs:
         name: X-Needs-Info issues to Need info column on triage board
         runs-on: ubuntu-26.04
         if: >
+            github.repository == 'element-hq/element-web' && (
             contains(github.event.issue.labels.*.name, 'X-Needs-Info')
+            )
         steps:
             - id: add_to_project
               uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
@@ -81,7 +87,9 @@ jobs:
         name: Z-Flaky-Test issues to Sized for maintainer column on triage board
         runs-on: ubuntu-26.04
         if: >
+            github.repository == 'element-hq/element-web' && (
             contains(github.event.issue.labels.*.name, 'Z-Flaky-Test')
+            )
         steps:
             - id: add_to_project
               uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
@@ -104,6 +112,7 @@ jobs:
         name: P1 X-Needs-Design to Design project board
         runs-on: ubuntu-26.04
         if: >
+            github.repository == 'element-hq/element-web' && (
             contains(github.event.issue.labels.*.name, 'X-Needs-Design') &&
             (contains(github.event.issue.labels.*.name, 'S-Critical') &&
              (contains(github.event.issue.labels.*.name, 'O-Frequent') ||
@@ -111,6 +120,7 @@ jobs:
              contains(github.event.issue.labels.*.name, 'S-Major') &&
              contains(github.event.issue.labels.*.name, 'O-Frequent') ||
              contains(github.event.issue.labels.*.name, 'A11y'))
+            )
         steps:
             - uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
               with:
@@ -121,7 +131,9 @@ jobs:
         name: X-Needs-Product to product project board
         runs-on: ubuntu-26.04
         if: >
+            github.repository == 'element-hq/element-web' && (
             contains(github.event.issue.labels.*.name, 'X-Needs-Product')
+            )
         steps:
             - uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
               with:
@@ -132,7 +144,9 @@ jobs:
         name: Search issues to project board
         runs-on: ubuntu-26.04
         if: >
+            github.repository == 'element-hq/element-web' && (
             contains(github.event.issue.labels.*.name, 'A-New-Search-Experience')
+            )
         steps:
             - uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
               with:
@@ -143,7 +157,9 @@ jobs:
         name: Add labelled issues to VoIP project board
         runs-on: ubuntu-26.04
         if: >
+            github.repository == 'element-hq/element-web' && (
             contains(github.event.issue.labels.*.name, 'Team: VoIP')
+            )
         steps:
             - uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
               with:
@@ -154,7 +170,9 @@ jobs:
         name: Add labelled issues to Crypto project
         runs-on: ubuntu-26.04
         if: >
+            github.repository == 'element-hq/element-web' && (
             contains(github.event.issue.labels.*.name, 'Team: Crypto')
+            )
         steps:
             - uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
               with:
@@ -165,7 +183,9 @@ jobs:
         name: Add labelled issues to Integrations project
         runs-on: ubuntu-26.04
         if: >
+            github.repository == 'element-hq/element-web' && (
             contains(github.event.issue.labels.*.name, 'Team: Integrations')
+            )
         steps:
             - uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
               with:
@@ -176,12 +196,14 @@ jobs:
         name: Add labelled issues to tech debt project
         runs-on: ubuntu-26.04
         if: >
+            github.repository == 'element-hq/element-web' && (
             contains(github.event.issue.labels.*.name, 'A-Developer-Experience') ||
             contains(github.event.issue.labels.*.name, 'A-Documentation') ||
             contains(github.event.issue.labels.*.name, 'A-Packaging') ||
             contains(github.event.issue.labels.*.name, 'A-Technical-Debt') ||
             contains(github.event.issue.labels.*.name, 'A-Testing') ||
             contains(github.event.issue.labels.*.name, 'Z-Flaky-Test')
+            )
         steps:
             - uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
               with:

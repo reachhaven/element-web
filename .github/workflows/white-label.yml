@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2026 vDL Digital Ventures
+#
+# SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+
+# Keeps brands out of the fork (deploy/web/check-white-label.sh) and checks the
+# licence of the fork's own files. The patterns come from the WHITE_LABEL_PATTERNS
+# secret, which the logs mask; the check fails while it is unset. The image
+# workflow calls this one for staging/web.
+name: White label
+
+on:
+    pull_request: {}
+    push:
+        branches: [config/web-image]
+    workflow_call:
+        secrets:
+            WHITE_LABEL_PATTERNS:
+                required: false
+
+permissions: {}
+
+jobs:
+    check:
+        name: White label
+        if: github.repository != 'element-hq/element-web'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            # The whole history, to find where the fork leaves upstream.
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+
+            - name: Fetch upstream's develop
+              run: >-
+                  git fetch --no-tags https://github.com/element-hq/element-web.git
+                  +refs/heads/develop:refs/remotes/upstream/develop
+
+            - name: Look for brands
+              env:
+                  WHITE_LABEL_PATTERNS: ${{ secrets.WHITE_LABEL_PATTERNS }}
+              run: deploy/web/check-white-label.sh upstream/develop
+
+            - name: Check the licence of the fork's files
+              run: >-
+                  git ls-files -z deploy scripts/rebuild-staging.sh CLAUDE.md
+                  .github/workflows/web-image.yml .github/workflows/white-label.yml .github/workflows/sync-upstream.yml
+                  | xargs -0 pipx run --spec reuse==6.3.0 reuse lint-file

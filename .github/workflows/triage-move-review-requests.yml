@@ -6,6 +6,7 @@ on:
 permissions: {} # Uses ELEMENT_BOT_TOKEN instead
 jobs:
     add_design_pr_to_project:
+        if: github.repository == 'element-hq/element-web'
         name: Move PRs asking for design review to the design board
         runs-on: ubuntu-26.04
         steps:
@@ -74,6 +75,7 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.ELEMENT_BOT_TOKEN }}
 
     add_product_pr_to_project:
+        if: github.repository == 'element-hq/element-web'
         name: Move PRs asking for design review to the design board
         runs-on: ubuntu-26.04
         steps:

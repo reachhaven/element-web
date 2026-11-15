@@ -18,6 +18,7 @@ concurrency: ${{ github.workflow }}
 permissions: {} # No permissions required
 jobs:
     bot:
+        if: github.repository == 'element-hq/element-web'
         name: Release topic update
         runs-on: ubuntu-26.04
         environment: Matrix

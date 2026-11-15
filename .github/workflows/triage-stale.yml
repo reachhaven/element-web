@@ -8,7 +8,7 @@ on:
 permissions: {}
 jobs:
     close:
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        if: github.repository == 'element-hq/element-web' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         runs-on: ubuntu-26.04
         permissions:
             actions: write
@@ -35,7 +35,7 @@ jobs:
     # which have seen no activity in 14 days are marked as draft.
     draft-inactive-prs:
         name: Mark inactive X-Needs-Iteration PRs as draft
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        if: github.repository == 'element-hq/element-web' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         runs-on: ubuntu-26.04
         steps:
             - name: Mark inactive labelled PRs as draft
@@ -79,7 +79,7 @@ jobs:
     # Remove X-Needs-Iteration label after new commits are pushed
     remove_label:
         name: Remove X-Needs-Iteration label after new commits are pushed
-        if: github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'X-Needs-Iteration')
+        if: github.repository == 'element-hq/element-web' && github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'X-Needs-Iteration')
         runs-on: ubuntu-26.04
         permissions:
             pull-requests: write

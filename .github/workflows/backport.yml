@@ -18,6 +18,7 @@ jobs:
         # Only react to merged PRs for security reasons.
         # See https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target.
         if: >
+            github.repository == 'element-hq/element-web' && (
             github.event.pull_request.merged
             && (
               github.event.action == 'closed'
@@ -25,6 +26,7 @@ jobs:
                 github.event.action == 'labeled'
                 && contains(github.event.label.name, 'backport')
               )
+            )
             )
         steps:
             - uses: tibdex/backport@9565281eda0731b1d20c4025c43339fb0a23812e # v2

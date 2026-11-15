@@ -7,6 +7,7 @@ concurrency: ${{ github.workflow }}
 permissions: {}
 jobs:
     draft:
+        if: github.repository == 'element-hq/element-web'
         permissions:
             contents: write
         uses: matrix-org/matrix-js-sdk/.github/workflows/release-drafter-workflow.yml@develop # zizmor: ignore[unpinned-uses]

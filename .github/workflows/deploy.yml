@@ -28,8 +28,10 @@ jobs:
         name: "Deploy to Cloudflare Pages"
         # Run if it's NOT a release, OR if it is a release and does NOT start with 'module/'
         if: |
+            github.repository == 'element-hq/element-web' && (
             github.event_name != 'release' ||
             !startsWith(github.event.release.tag_name, 'module/')
+            )
         runs-on: ubuntu-26.04
         environment: ${{ inputs.site || 'staging.element.io' }}
         permissions:
