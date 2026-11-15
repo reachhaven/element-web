@@ -9,6 +9,7 @@ Please see LICENSE files in the repository root for full details.
 import { type Composer as ComposerEvent } from "@matrix-org/analytics-events/types/typescript/Composer";
 import {
     type IEventRelation,
+    type IMentions,
     type MatrixEvent,
     type ISendEventResponse,
     type MatrixClient,
@@ -33,9 +34,10 @@ import { isContentModified } from "./isContentModified";
 import { CommandCategories, getCommand } from "../../../../../slash-commands/SlashCommands";
 import { runSlashCommand, shouldSendAnyway } from "../../../../../editor/commands";
 import { Action } from "../../../../../dispatcher/actions";
-import { addReplyToMessageContent } from "../../../../../utils/Reply";
-import { attachRelation, attachUrlPreviews } from "../../../../../utils/messages";
+import { addReplyToMessageContent, shouldDisplayReply } from "../../../../../utils/Reply";
+import { attachMessageMentions, attachRelation, attachUrlPreviews } from "../../../../../utils/messages";
 import { linksIn } from "../../../../../utils/UrlUtils";
+import { parsePermalink } from "../../../../../utils/permalinks/Permalinks";
 
 export interface SendMessageParams {
     mxClient: MatrixClient;
@@ -115,6 +117,9 @@ export async function sendMessage(
 
     // if content is null, we haven't done any slash command processing, so generate some content
     content ??= await createMessageContent(message, isHTML, params);
+    // The mentions are attached here, once the content is built, so that the content of a slash command gets them
+    // too, as in the legacy composer.
+    attachMessageMentions(mxClient.getSafeUserId(), content, mentionsInHtml(message), replyToEvent);
     if (await attachUrlPreviews(mxClient, room, urlPreviewSnapshot, content, linksIn(message).size !== 0)) {
         return;
     }
@@ -217,6 +222,21 @@ export async function editMessage(
         this.editorRef.current?.replaceEmoticon(position, REGEX_EMOTICON);
     }*/
     const editContent = await createMessageContent(html, true, { editedEvent });
+
+    // Attach the mentions to the edit and to its new content. As when the message was sent, a reply mentions the
+    // sender of the replied-to event. A thread message that is not a reply refers to the previous message in its
+    // thread as well, but only as a fallback for clients without threads.
+    const replyEventId = shouldDisplayReply(editedEvent) ? editedEvent.replyEventId : undefined;
+    const replyToEvent = replyEventId
+        ? mxClient.getRoom(editedEvent.getRoomId())?.findEventById(replyEventId)
+        : undefined;
+    attachMessageMentions(
+        mxClient.getSafeUserId(),
+        editContent,
+        mentionsInHtml(html),
+        replyToEvent,
+        editedEvent.getContent(),
+    );
     const newContent = editContent["m.new_content"]!;
 
     const shouldSend = true;
@@ -263,4 +283,32 @@ export async function editMessage(
 
     endEditing(roomContext);
     return response;
+}
+
+/**
+ * Find the users and the room that a message mentions, to pass to `attachMessageMentions`.
+ *
+ * The rich text mode writes a user pill as a plain link to the user's permalink and the at-room pill as the text
+ * "@room", leaving no other trace of the pills. So any link to a user's permalink mentions that user and "@room"
+ * mentions the room, as when the editor reads a message back in to edit it. The plain text mode writes a user pill
+ * as the same link with extra attributes, and the at-room pill as a link whose text is "@room".
+ *
+ * @param html - the message from either composer mode
+ * @returns the mentioned users, in the order they first appear, and whether the room is mentioned
+ */
+function mentionsInHtml(html: string): IMentions {
+    const document = new DOMParser().parseFromString(html, "text/html");
+    const userIds = new Set<string>();
+
+    for (const link of document.querySelectorAll("a[href]")) {
+        const permalink = parsePermalink(link.getAttribute("href")!);
+        if (permalink?.userId) userIds.add(permalink.userId);
+        // The text of a user or room pill is a name, which does not mention the room even if it reads "@room".
+        if (permalink) link.remove();
+    }
+
+    // Only "@room" as a whole word mentions the room, so "@roommates" or an email address does not.
+    const room = /(?<!\w)@room(?!\w)/.test(document.body.textContent ?? "");
+
+    return { user_ids: [...userIds], room };
 }
