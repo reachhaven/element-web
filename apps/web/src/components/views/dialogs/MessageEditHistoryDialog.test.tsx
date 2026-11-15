@@ -82,4 +82,33 @@ describe("<MessageEditHistory />", () => {
 
         expect(container).toMatchSnapshot();
     });
+
+    it("should show how the caption of a media message was edited", async () => {
+        const image = { msgtype: "m.image", url: "mxc://server/image", filename: "image.png" };
+        client.relations.mockResolvedValue({
+            events: [
+                new MatrixEvent({
+                    type: EventType.RoomMessage,
+                    room_id: roomId,
+                    origin_server_ts: 2,
+                    content: {
+                        "body": "* A sunny afternoon",
+                        "m.new_content": { ...image, body: "A sunny afternoon" },
+                    },
+                }),
+                new MatrixEvent({
+                    type: EventType.RoomMessage,
+                    room_id: roomId,
+                    origin_server_ts: 1,
+                    content: { "body": "* A sunny day", "m.new_content": { ...image, body: "A sunny day" } },
+                }),
+            ],
+        });
+
+        const { container, getByText } = await renderComponent();
+
+        expect(getByText("A sunny day")).toBeInTheDocument();
+        expect(container.querySelector(".mx_EditHistoryMessage_deletion")).toHaveTextContent("day");
+        expect(container.querySelector(".mx_EditHistoryMessage_insertion")).toHaveTextContent("afternoon");
+    });
 });

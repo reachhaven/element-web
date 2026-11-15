@@ -13,6 +13,7 @@ import { expect, test } from "../../element-web-test";
 import { type ElementAppPage } from "../../pages/ElementAppPage";
 import { SettingLevel } from "../../../src/settings/SettingLevel";
 import { isDendrite } from "../../plugins/homeserver/dendrite";
+import { getSampleFilePath } from "../../sample-files";
 
 async function sendEvent(app: ElementAppPage, roomId: string): Promise<ISendEventResponse> {
     return app.client.sendEvent(roomId, null, "m.room.message" as EventType, {
@@ -327,6 +328,27 @@ test.describe("Editing", () => {
         await autocomplete.locator(".mx_Autocomplete_Completion_title", { hasText: ":+1:" }).click();
         // The inserted emoji may carry a trailing variation selector, so match on the emoji alone.
         await expect(editComposer).toContainText("Message 👍");
+    });
+
+    test("should edit the caption of an image", async ({ page, app, room }) => {
+        await page.goto(`#/room/${room.roomId}`);
+        await app.composerUploadFiles("room", getSampleFilePath("riot.png"));
+
+        const tile = page.locator(".mx_RoomView_body .mx_EventTile").filter({ has: page.locator(".mx_ImageBody") });
+        const line = tile.locator(".mx_EventTile_line");
+        await line.hover();
+        await line.getByRole("button", { name: "Edit", exact: true }).click();
+
+        // The image was sent without a caption, so there is none to start from
+        const editComposer = page.getByRole("textbox", { name: "Edit message" });
+        await expect(editComposer).toHaveText("");
+        await editComposer.pressSequentially("The *new* logo");
+        await editComposer.press("Enter");
+
+        await expect(tile.locator(".mx_ImageBody")).toBeVisible();
+        await expect(tile.locator(".mx_EventTile_caption")).toContainText("The new logo");
+        await expect(tile.locator(".mx_EventTile_caption em")).toHaveText("new");
+        await expect(tile.getByRole("button", { name: /Edited at .*? Select to view edit history\./ })).toBeVisible();
     });
 
     test("should correctly display events which are edited, where we lack the edit event", async ({

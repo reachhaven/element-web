@@ -18,6 +18,8 @@ import { useEditing } from "./hooks/useEditing";
 import { useInitialContent } from "./hooks/useInitialContent";
 import { ComposerContext, getDefaultContextValue } from "./ComposerContext";
 import { type ComposerFunctions } from "./types";
+import { MediaEventHelper } from "../../../../utils/MediaEventHelper";
+import { _t } from "../../../../languageHandler";
 
 interface ContentProps {
     disabled?: boolean;
@@ -69,11 +71,17 @@ export default function EditWysiwygComposer({
         return <></>;
     }
 
+    // A media message is edited for its caption
+    const placeholder = MediaEventHelper.canHaveCaption(editorStateTransfer.getEvent())
+        ? _t("composer|placeholder_caption")
+        : undefined;
+
     return (
         <ComposerContext.Provider value={defaultContextValue}>
             <WysiwygComposer
                 className={classNames("mx_EditWysiwygComposer", className)}
                 initialContent={initialContent}
+                placeholder={placeholder}
                 onChange={onChange}
                 onSend={editMessage}
                 {...props}

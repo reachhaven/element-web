@@ -330,7 +330,9 @@ export default class MessageEvent extends React.Component<IProps> implements IMe
             inhibitInteraction: this.props.inhibitInteraction,
             id: this.props.id,
         };
-        if (hasCaption) {
+        // A media message being edited shows the editor for its caption under the media, even without a caption yet
+        const isEditingCaption = !!this.props.editState && MediaEventHelper.canHaveCaption(this.props.mxEvent);
+        if (hasCaption || isEditingCaption) {
             return <CaptionBody {...bodyProps} WrappedBodyType={BodyType} />;
         }
 

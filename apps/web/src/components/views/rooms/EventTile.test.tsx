@@ -53,6 +53,7 @@ import SettingsStore from "../../../settings/SettingsStore";
 import { RoomPermalinkCreator } from "../../../utils/permalinks/Permalinks";
 import PlatformPeg from "../../../PlatformPeg";
 import { EventPresentationContextProvider } from "../../../utils/EventPresentationContextProvider.tsx";
+import EditorStateTransfer from "../../../utils/EditorStateTransfer";
 
 function getTile(container: HTMLElement): HTMLElement {
     const tile = container.querySelector(".mx_EventTile");
@@ -688,6 +689,32 @@ describe("EventTile", () => {
             await userEvent.hover(getTile(container));
 
             expect(container.querySelector(".mx_MessageActionBar")).toBeNull();
+        });
+    });
+
+    describe("media", () => {
+        beforeEach(() => {
+            // The media body itself is not under test here
+            vi.spyOn(EventTileFactory, "renderTile").mockReturnValue(<div />);
+            mxEvent = mkEvent({
+                event: true,
+                type: EventType.RoomMessage,
+                room: room.roomId,
+                user: client.getSafeUserId(),
+                content: { msgtype: "m.image", body: "image.png", url: "mxc://server/image" },
+            });
+        });
+
+        it("lays out media without a caption as media", () => {
+            const { container } = getComponent();
+
+            expect(getLine(container).className).toMatch(/lineMedia/);
+        });
+
+        it("lays out media whose caption is edited like media with a caption", () => {
+            const { container } = getComponent({ editState: new EditorStateTransfer(mxEvent) });
+
+            expect(getLine(container).className).not.toMatch(/lineMedia/);
         });
     });
 

@@ -43,6 +43,12 @@ $left-gutter: 64px;
             /* Make sure the formatting bar is visible */
             overflow: visible;
         }
+
+        /* A media message whose caption is edited holds the editor next to the media (CaptionBody in
+           MessageEvent): keep the autocomplete and formatting bar of the editor visible above the media too */
+        &:has(> .mx_EditMessageComposerWrapper) {
+            overflow: visible;
+        }
     }
 
     .mx_EditMessageComposerWrapper {

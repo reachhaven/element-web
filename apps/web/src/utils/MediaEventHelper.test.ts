@@ -45,6 +45,18 @@ describe("MediaEventHelper", () => {
     });
 
     it.each([
+        ["image", { msgtype: "m.image", body: "image.png" }, true],
+        ["file", { msgtype: "m.file", body: "doc.pdf" }, true],
+        ["audio clip", { msgtype: "m.audio", body: "song.ogg" }, true],
+        ["video", { msgtype: "m.video", body: "clip.mp4" }, true],
+        ["text message", { msgtype: "m.text", body: "Hello" }, false],
+        ["location", { msgtype: "m.location", body: "Somewhere", geo_uri: "geo:51.5,-0.1" }, false],
+    ])("canHaveCaption returns the expected value for a %s", (_, content, expected) => {
+        const event = new MatrixEvent({ type: "m.room.message", content });
+        expect(MediaEventHelper.canHaveCaption(event)).toBe(expected);
+    });
+
+    it.each([
         ["captioned image", { msgtype: "m.image", filename: "image.png", body: "A caption" }, true],
         ["captioned file", { msgtype: "m.file", filename: "doc.pdf", body: "A caption" }, true],
         ["image without filename", { msgtype: "m.image", body: "image.png" }, false],
