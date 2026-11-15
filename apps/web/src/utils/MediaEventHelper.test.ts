@@ -67,6 +67,16 @@ describe("MediaEventHelper", () => {
         expect(MediaEventHelper.hasCaption(event)).toBe(expected);
     });
 
+    it("should name the download of a captioned file after its filename rather than its caption", () => {
+        stubClient();
+        const event = new MatrixEvent({
+            type: "m.room.message",
+            content: { msgtype: "m.image", filename: "image.png", body: "A caption", url: "mxc://matrix.org/abcdef" },
+        });
+
+        expect(new MediaEventHelper(event).fileName).toBe("image.png");
+    });
+
     describe("for media this client uploaded", () => {
         const uploaded = new Blob(["uploaded bytes"], { type: "image/png" });
         const thumbnail = new Blob(["thumbnail bytes"], { type: "image/jpeg" });

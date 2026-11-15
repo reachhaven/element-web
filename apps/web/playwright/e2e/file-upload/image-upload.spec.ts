@@ -40,4 +40,41 @@ test.describe("Image Upload", () => {
         const imgTile = page.locator(".mx_ImageBody").first();
         await expect(imgTile).toBeVisible();
     });
+
+    test("should send an image with a caption", async ({ page, app }) => {
+        await app.setComposerInputFiles("room", getSampleFilePath("riot.png"));
+        // The caption field has the focus: typing writes the caption and Enter uploads the image
+        await expect(page.getByRole("dialog").getByRole("textbox", { name: "Caption (optional)" })).toBeFocused();
+        await page.keyboard.type("The **new** logo");
+        await page.keyboard.press("Enter");
+
+        await app.timeline.scrollToBottom();
+        const tile = page.locator(".mx_EventTile").filter({ has: page.locator(".mx_ImageBody") });
+        await expect(tile.locator(".mx_ImageBody")).toBeVisible();
+        await expect(tile.locator(".mx_EventTile_caption")).toHaveText("The new logo");
+        await expect(tile.locator(".mx_EventTile_caption strong")).toHaveText("new");
+
+        // The caption is the body, and the file keeps its name in filename
+        const roomId = await app.getCurrentRoomIdFromUrl();
+        await expect
+            .poll(() =>
+                app.client.evaluate(
+                    (client, roomId) =>
+                        client
+                            .getRoom(roomId)
+                            ?.getLiveTimeline()
+                            .getEvents()
+                            .findLast((event) => event.getType() === "m.room.message")
+                            ?.getContent(),
+                    roomId,
+                ),
+            )
+            .toMatchObject({
+                msgtype: "m.image",
+                body: "The **new** logo",
+                filename: "riot.png",
+                format: "org.matrix.custom.html",
+                formatted_body: "The <strong>new</strong> logo",
+            });
+    });
 });

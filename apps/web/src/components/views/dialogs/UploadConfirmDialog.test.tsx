@@ -8,7 +8,8 @@ Please see LICENSE files in the repository root for full details.
 // @vitest-environment happy-dom
 
 import React from "react";
-import { render, waitFor } from "test-utils-rtl";
+import { render, screen, waitFor } from "test-utils-rtl";
+import userEvent from "@testing-library/user-event";
 import { secureRandomString } from "matrix-js-sdk/src/randomstring";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
@@ -109,5 +110,82 @@ describe("<UploadConfirmDialog />", () => {
 
         expect(getByText("notes.txt")).toBeInTheDocument();
         expect(container.querySelector("img, video, audio")).toBeNull();
+    });
+
+    describe("caption", () => {
+        const file = new File(["hello"], "notes.txt", { type: "text/plain" });
+
+        it("should offer no caption field unless asked to, and focus the upload button", () => {
+            render(<UploadConfirmDialog file={file} onFinished={vi.fn()} />);
+
+            expect(screen.queryByRole("textbox", { name: "Caption (optional)" })).not.toBeInTheDocument();
+            expect(screen.getByRole("button", { name: "Upload" })).toHaveFocus();
+        });
+
+        it("should offer an optional caption field and focus it", () => {
+            render(<UploadConfirmDialog file={file} allowCaption onFinished={vi.fn()} />);
+
+            const captionField = screen.getByRole("textbox", { name: "Caption (optional)" });
+            expect(captionField).toHaveAttribute("placeholder", "Add a caption");
+            expect(captionField).not.toBeRequired();
+            expect(captionField).toHaveFocus();
+        });
+
+        it("should pass the caption back when the file is uploaded", async () => {
+            const onFinished = vi.fn();
+            render(<UploadConfirmDialog file={file} allowCaption onFinished={onFinished} />);
+
+            await userEvent.type(screen.getByRole("textbox", { name: "Caption (optional)" }), "Meeting notes");
+            await userEvent.click(screen.getByRole("button", { name: "Upload" }));
+
+            expect(onFinished).toHaveBeenCalledWith(true, false, "Meeting notes");
+        });
+
+        it("should pass an empty caption back when none was entered", async () => {
+            const onFinished = vi.fn();
+            render(<UploadConfirmDialog file={file} allowCaption onFinished={onFinished} />);
+
+            await userEvent.click(screen.getByRole("button", { name: "Upload" }));
+
+            expect(onFinished).toHaveBeenCalledWith(true, false, "");
+        });
+
+        it("should upload the file when Enter is pressed in the caption field", async () => {
+            const onFinished = vi.fn();
+            render(<UploadConfirmDialog file={file} allowCaption onFinished={onFinished} />);
+
+            await userEvent.type(screen.getByRole("textbox", { name: "Caption (optional)" }), "Meeting notes{Enter}");
+
+            expect(onFinished).toHaveBeenCalledTimes(1);
+            expect(onFinished).toHaveBeenCalledWith(true, false, "Meeting notes");
+        });
+
+        it("should pass the caption of the file shown back when all files are uploaded", async () => {
+            const onFinished = vi.fn();
+            render(
+                <UploadConfirmDialog
+                    file={file}
+                    allowCaption
+                    currentIndex={0}
+                    totalFiles={3}
+                    onFinished={onFinished}
+                />,
+            );
+
+            await userEvent.type(screen.getByRole("textbox", { name: "Caption (optional)" }), "Meeting notes");
+            await userEvent.click(screen.getByRole("button", { name: "Upload all" }));
+
+            expect(onFinished).toHaveBeenCalledWith(true, true, "Meeting notes");
+        });
+
+        it("should not upload when the dialog is closed", async () => {
+            const onFinished = vi.fn();
+            render(<UploadConfirmDialog file={file} allowCaption onFinished={onFinished} />);
+
+            await userEvent.type(screen.getByRole("textbox", { name: "Caption (optional)" }), "Meeting notes");
+            await userEvent.click(screen.getByRole("button", { name: "Close dialog" }));
+
+            expect(onFinished).toHaveBeenCalledWith(false);
+        });
     });
 });
