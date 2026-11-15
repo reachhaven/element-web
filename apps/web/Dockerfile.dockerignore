@@ -25,6 +25,7 @@ apps/web/webapp/
 apps/web/debian/
 apps/desktop
 !apps/desktop/package.json
+deploy/e2e/
 
 packages/shared-components/__vis__/
 packages/shared-components/storybook-static/
