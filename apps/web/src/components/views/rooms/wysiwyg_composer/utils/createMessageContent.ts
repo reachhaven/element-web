@@ -7,7 +7,7 @@ Please see LICENSE files in the repository root for full details.
 */
 
 import { richToPlain, plainToRich } from "@vector-im/matrix-wysiwyg";
-import { type IContent, type IEventRelation, MatrixEvent, MsgType } from "matrix-js-sdk/src/matrix";
+import { type IEventRelation, type IMentions, MatrixEvent, MsgType } from "matrix-js-sdk/src/matrix";
 import {
     type ReplacementEvent,
     type RoomMessageEventContent,
@@ -18,18 +18,9 @@ import SettingsStore from "../../../../../settings/SettingsStore";
 import { parsePermalink } from "../../../../../utils/permalinks/Permalinks";
 import { addReplyToMessageContent } from "../../../../../utils/Reply";
 import { isNotNull } from "../../../../../Typeguards";
+import { attachMentions, attachRelation } from "../../../../../utils/messages";
 
 export const EMOTE_PREFIX = "/me ";
-
-// Merges favouring the given relation
-function attachRelation(content: IContent, relation?: IEventRelation): void {
-    if (relation) {
-        content["m.relates_to"] = {
-            ...content["m.relates_to"],
-            ...relation,
-        };
-    }
-}
 
 interface CreateMessageContentParams {
     relation?: IEventRelation;
@@ -40,6 +31,7 @@ interface CreateMessageContentParams {
 const isMatrixEvent = (e: MatrixEvent | undefined): e is MatrixEvent => e instanceof MatrixEvent;
 
 export async function createMessageContent(
+    sender: string,
     message: string,
     isHTML: boolean,
     { relation, replyToEvent, editedEvent }: CreateMessageContentParams,
@@ -92,8 +84,8 @@ export async function createMessageContent(
 
     const newRelation = isEditing ? { ...relation, rel_type: "m.replace", event_id: editedEvent.getId() } : relation;
 
-    // TODO Do we need to attach mentions here?
-    // TODO Handle editing?
+    // Build the mentions properties for the content and, when editing, for the new content.
+    attachMentions(sender, content, mentionsInHtml(message), replyToEvent, isEditing ? editedEvent.getContent() : null);
     attachRelation(content, newRelation);
 
     if (!isEditing && replyToEvent) {
@@ -149,4 +141,32 @@ function convertPlainTextToBody(content: string): string {
     });
 
     return document.body.innerHTML;
+}
+
+/**
+ * Find the users and the room that a message mentions, to pass to `attachMentions`.
+ *
+ * The rich text mode writes a user pill as a plain link to the user's permalink and the at-room pill as the text
+ * "@room", leaving no other trace of the pills. So any link to a user's permalink mentions that user and "@room"
+ * mentions the room, as when the editor reads a message back in to edit it. The plain text mode writes a user pill
+ * as the same link with extra attributes, and the at-room pill as a link whose text is "@room".
+ *
+ * @param html - the message from either composer mode
+ * @returns the mentioned users, in the order they first appear, and whether the room is mentioned
+ */
+function mentionsInHtml(html: string): IMentions {
+    const document = new DOMParser().parseFromString(html, "text/html");
+    const userIds = new Set<string>();
+
+    for (const link of document.querySelectorAll("a[href]")) {
+        const permalink = parsePermalink(link.getAttribute("href")!);
+        if (permalink?.userId) userIds.add(permalink.userId);
+        // The text of a user or room pill is a name, which does not mention the room even if it reads "@room".
+        if (permalink) link.remove();
+    }
+
+    // Only "@room" as a whole word mentions the room, so "@roommates" or an email address does not.
+    const room = /(?<!\w)@room(?!\w)/.test(document.body.textContent ?? "");
+
+    return { user_ids: [...userIds], room };
 }

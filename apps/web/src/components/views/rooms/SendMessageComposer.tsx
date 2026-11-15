@@ -64,7 +64,7 @@ import { type Caret } from "../../../editor/caret";
 import { type IDiff } from "../../../editor/diff";
 import { getBlobSafeMimeType } from "../../../utils/blobs";
 import { getEmojiRegex } from "../../../HtmlUtils";
-import { attachMentions, attachRelation, attachUrlPreviews } from "../../../utils/messages";
+import { attachMentions, attachRelation, attachUrlPreviews, mentionsInModel } from "../../../utils/messages";
 import { type RoomUploadViewModel, useRoomUploadViewModel } from "../../../viewmodels/room/RoomUploadViewModel";
 import { type MessageComposerUrlPreviewViewModel } from "../../../viewmodels/composer/MessageComposerUrlPreviewViewModel";
 import { linksIn } from "../../../utils/UrlUtils";
@@ -104,7 +104,7 @@ export function createMessageContent(
     }
 
     // Build the mentions property and add it to the event content.
-    attachMentions(sender, content, model, replyToEvent);
+    attachMentions(sender, content, mentionsInModel(model), replyToEvent);
 
     attachRelation(content, relation);
     if (replyToEvent) {
@@ -406,7 +406,7 @@ export class SendMessageComposer extends React.Component<ISendMessageComposerPro
                     [CommandCategories.messages as string, CommandCategories.effects as string].includes(cmd.category)
                 ) {
                     // Attach any mentions which might be contained in the command content.
-                    attachMentions(this.props.mxClient.getSafeUserId(), content, model, replyToEvent);
+                    attachMentions(this.props.mxClient.getSafeUserId(), content, mentionsInModel(model), replyToEvent);
                     attachRelation(content, this.props.relation);
                     if (replyToEvent) {
                         addReplyToMessageContent(content, replyToEvent);

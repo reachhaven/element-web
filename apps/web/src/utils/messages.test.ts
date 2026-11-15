@@ -16,7 +16,7 @@ import { type MessageComposerUrlPreviewSnapshot } from "@element-hq/web-shared-c
 import { type UrlPreview } from "shared-types";
 import fetchMock from "@fetch-mock/vitest";
 
-import { attachMentions, attachUrlPreviews } from "./messages";
+import { attachMentions, attachUrlPreviews, mentionsInModel } from "./messages";
 import EditorModel from "../editor/model";
 import { createPartCreator } from "../editor/__mocks__";
 import { type RoomMessageEventContent } from "../../@types/url-preview";
@@ -425,13 +425,44 @@ describe("attachUrlPreviews in an encrypted room", () => {
     });
 });
 
+describe("mentionsInModel", () => {
+    const partsCreator = createPartCreator();
+
+    it("finds no mentions in plain text", () => {
+        const model = new EditorModel([partsCreator.plain("hello @bob:test and @room")], partsCreator);
+        expect(mentionsInModel(model)).toEqual({ user_ids: [], room: false });
+    });
+
+    it("finds each user pill once, in order", () => {
+        const model = new EditorModel(
+            [
+                partsCreator.userPill("Bob", "@bob:test"),
+                partsCreator.userPill("Charlie", "@charlie:test"),
+                partsCreator.userPill("Bob", "@bob:test"),
+            ],
+            partsCreator,
+        );
+        expect(mentionsInModel(model)).toEqual({ user_ids: ["@bob:test", "@charlie:test"], room: false });
+    });
+
+    it("finds an at-room pill", () => {
+        const model = new EditorModel([partsCreator.atRoomPill("@room")], partsCreator);
+        expect(mentionsInModel(model)).toEqual({ user_ids: [], room: true });
+    });
+
+    it("does not count a room pill as a mention", () => {
+        const model = new EditorModel([partsCreator.roomPill("#room:test")], partsCreator);
+        expect(mentionsInModel(model)).toEqual({ user_ids: [], room: false });
+    });
+});
+
 describe("attachMentions", () => {
     const partsCreator = createPartCreator();
 
     it("no mentions", () => {
         const model = new EditorModel([], partsCreator);
         const content: IContent = {};
-        attachMentions("@alice:test", content, model, undefined);
+        attachMentions("@alice:test", content, mentionsInModel(model), undefined);
         expect(content).toEqual({
             "m.mentions": {},
         });
@@ -440,7 +471,20 @@ describe("attachMentions", () => {
     it("test user mentions", () => {
         const model = new EditorModel([partsCreator.userPill("Bob", "@bob:test")], partsCreator);
         const content: IContent = {};
-        attachMentions("@alice:test", content, model, undefined);
+        attachMentions("@alice:test", content, mentionsInModel(model), undefined);
+        expect(content).toEqual({
+            "m.mentions": { user_ids: ["@bob:test"] },
+        });
+    });
+
+    it("test self mention", () => {
+        // The sender is never mentioned, even if the message mentions them.
+        const model = new EditorModel(
+            [partsCreator.userPill("Alice", "@alice:test"), partsCreator.userPill("Bob", "@bob:test")],
+            partsCreator,
+        );
+        const content: IContent = {};
+        attachMentions("@alice:test", content, mentionsInModel(model), undefined);
         expect(content).toEqual({
             "m.mentions": { user_ids: ["@bob:test"] },
         });
@@ -457,7 +501,7 @@ describe("attachMentions", () => {
             event: true,
         });
         let content: IContent = {};
-        attachMentions("@alice:test", content, model, replyToEvent);
+        attachMentions("@alice:test", content, mentionsInModel(model), replyToEvent);
         expect(content).toEqual({
             "m.mentions": { user_ids: ["@bob:test"] },
         });
@@ -471,7 +515,7 @@ describe("attachMentions", () => {
             event: true,
         });
         content = {};
-        attachMentions("@alice:test", content, model, replyToEvent);
+        attachMentions("@alice:test", content, mentionsInModel(model), replyToEvent);
         expect(content).toEqual({
             "m.mentions": { user_ids: ["@bob:test"] },
         });
@@ -480,7 +524,7 @@ describe("attachMentions", () => {
     it("test room mention", () => {
         const model = new EditorModel([partsCreator.atRoomPill("@room")], partsCreator);
         const content: IContent = {};
-        attachMentions("@alice:test", content, model, undefined);
+        attachMentions("@alice:test", content, mentionsInModel(model), undefined);
         expect(content).toEqual({
             "m.mentions": { room: true },
         });
@@ -497,7 +541,7 @@ describe("attachMentions", () => {
             event: true,
         });
         const content: IContent = {};
-        attachMentions("@alice:test", content, model, replyToEvent);
+        attachMentions("@alice:test", content, mentionsInModel(model), replyToEvent);
         expect(content).toEqual({
             "m.mentions": {},
         });
@@ -515,7 +559,7 @@ describe("attachMentions", () => {
             event: true,
         });
         const content: IContent = {};
-        attachMentions("@alice:test", content, model, replyToEvent);
+        attachMentions("@alice:test", content, mentionsInModel(model), replyToEvent);
         expect(content).toEqual({
             "m.mentions": {},
         });
@@ -526,7 +570,7 @@ describe("attachMentions", () => {
             const model = new EditorModel([], partsCreator);
             const content: IContent = { "m.new_content": {} };
             const prevContent: IContent = {};
-            attachMentions("@alice:test", content, model, undefined, prevContent);
+            attachMentions("@alice:test", content, mentionsInModel(model), undefined, prevContent);
             expect(content).toEqual({
                 "m.mentions": {},
                 "m.new_content": { "m.mentions": {} },
@@ -539,7 +583,7 @@ describe("attachMentions", () => {
             const prevContent: IContent = {
                 "m.mentions": { user_ids: ["@bob:test"], room: true },
             };
-            attachMentions("@alice:test", content, model, undefined, prevContent);
+            attachMentions("@alice:test", content, mentionsInModel(model), undefined, prevContent);
             expect(content).toEqual({
                 "m.mentions": {},
                 "m.new_content": { "m.mentions": {} },
@@ -550,7 +594,7 @@ describe("attachMentions", () => {
             const model = new EditorModel([partsCreator.userPill("Bob", "@bob:test")], partsCreator);
             const content: IContent = { "m.new_content": {} };
             const prevContent: IContent = {};
-            attachMentions("@alice:test", content, model, undefined, prevContent);
+            attachMentions("@alice:test", content, mentionsInModel(model), undefined, prevContent);
             expect(content).toEqual({
                 "m.mentions": { user_ids: ["@bob:test"] },
                 "m.new_content": { "m.mentions": { user_ids: ["@bob:test"] } },
@@ -561,7 +605,7 @@ describe("attachMentions", () => {
             const model = new EditorModel([partsCreator.userPill("Bob", "@bob:test")], partsCreator);
             const content: IContent = { "m.new_content": {} };
             const prevContent: IContent = { "m.mentions": { user_ids: ["@bob:test"] } };
-            attachMentions("@alice:test", content, model, undefined, prevContent);
+            attachMentions("@alice:test", content, mentionsInModel(model), undefined, prevContent);
             expect(content).toEqual({
                 "m.mentions": {},
                 "m.new_content": { "m.mentions": { user_ids: ["@bob:test"] } },
@@ -572,7 +616,7 @@ describe("attachMentions", () => {
             const model = new EditorModel([partsCreator.atRoomPill("@room")], partsCreator);
             const content: IContent = { "m.new_content": {} };
             const prevContent: IContent = {};
-            attachMentions("@alice:test", content, model, undefined, prevContent);
+            attachMentions("@alice:test", content, mentionsInModel(model), undefined, prevContent);
             expect(content).toEqual({
                 "m.mentions": { room: true },
                 "m.new_content": { "m.mentions": { room: true } },
@@ -583,7 +627,7 @@ describe("attachMentions", () => {
             const model = new EditorModel([partsCreator.atRoomPill("@room")], partsCreator);
             const content: IContent = { "m.new_content": {} };
             const prevContent: IContent = { "m.mentions": { room: true } };
-            attachMentions("@alice:test", content, model, undefined, prevContent);
+            attachMentions("@alice:test", content, mentionsInModel(model), undefined, prevContent);
             expect(content).toEqual({
                 "m.mentions": {},
                 "m.new_content": { "m.mentions": { room: true } },
@@ -596,7 +640,7 @@ describe("attachMentions", () => {
             const content: IContent = { "m.new_content": {} };
             // @ts-ignore - Purposefully testing invalid data.
             const prevContent: IContent = { "m.mentions": { user_ids: "@bob:test" } };
-            attachMentions("@alice:test", content, model, undefined, prevContent);
+            attachMentions("@alice:test", content, mentionsInModel(model), undefined, prevContent);
             expect(content).toEqual({
                 "m.mentions": {},
                 "m.new_content": { "m.mentions": {} },

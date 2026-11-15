@@ -43,7 +43,7 @@ import { KeyBindingAction } from "../../../accessibility/KeyboardShortcuts";
 import { PosthogAnalytics } from "../../../PosthogAnalytics";
 import { editorRoomKey, editorStateKey } from "../../../Editing";
 import type DocumentOffset from "../../../editor/offset";
-import { attachMentions, attachRelation } from "../../../utils/messages";
+import { attachMentions, attachRelation, mentionsInModel } from "../../../utils/messages";
 import { filterBoolean } from "../../../utils/arrays";
 import { MatrixClientPeg } from "../../../MatrixClientPeg";
 
@@ -80,7 +80,13 @@ export function createEditContent(
     }
 
     // Build the mentions properties for both the content and new_content.
-    attachMentions(editedEvent.sender!.userId, contentBody, model, replyToEvent, editedEvent.getContent());
+    attachMentions(
+        editedEvent.sender!.userId,
+        contentBody,
+        mentionsInModel(model),
+        replyToEvent,
+        editedEvent.getContent(),
+    );
     attachRelation(contentBody, { rel_type: "m.replace", event_id: editedEvent.getId() });
 
     return contentBody as RoomMessageEventContent;

@@ -8,7 +8,7 @@ Please see LICENSE files in the repository root for full details.
 
 // @vitest-environment happy-dom
 
-import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
 import { EventStatus, type IEventRelation, MsgType } from "matrix-js-sdk/src/matrix";
 import { type RoomMessageEventContent } from "matrix-js-sdk/src/types";
 
@@ -26,6 +26,7 @@ import * as Reply from "../../../../../utils/Reply";
 import { MatrixClientPeg } from "../../../../../MatrixClientPeg";
 import { Action } from "../../../../../dispatcher/actions";
 import { attachUrlPreviews } from "../../../../../utils/messages";
+import { makeUserPermalink } from "../../../../../utils/permalinks/Permalinks";
 
 // Wrapped rather than replaced: only the cancellation test below overrides it.
 vi.mock("../../../../../utils/messages", async (importOriginal) => {
@@ -187,10 +188,11 @@ describe("message", () => {
 
             // Then
             const expectedContent = {
-                body: "*__hello__ world*",
-                format: "org.matrix.custom.html",
-                formatted_body: "<i><b>hello</b> world</i>",
-                msgtype: "m.text",
+                "body": "*__hello__ world*",
+                "format": "org.matrix.custom.html",
+                "formatted_body": "<i><b>hello</b> world</i>",
+                "msgtype": "m.text",
+                "m.mentions": {},
             };
             expect(mockClient.sendMessage).toHaveBeenCalledWith("myfakeroom", null, expectedContent);
             expect(spyDispatcher).toHaveBeenCalledWith({ action: "message_sent" });
@@ -225,6 +227,7 @@ describe("message", () => {
                 "format": "org.matrix.custom.html",
                 "formatted_body": "<i><b>hello</b> world</i>",
                 "msgtype": "m.text",
+                "m.mentions": { user_ids: [mockReplyEvent.getSender()] },
                 "m.relates_to": {
                     "m.in_reply_to": {
                         event_id: mockReplyEvent.getId(),
@@ -232,6 +235,23 @@ describe("message", () => {
                 },
             };
             expect(mockClient.sendMessage).toHaveBeenCalledWith("myfakeroom", null, expectedContent);
+        });
+
+        it("Should mention the users in the message, but not the sender", async () => {
+            const self = `<a href="${makeUserPermalink(mockClient.getSafeUserId())}">Me</a>`;
+            const bob = `<a href="${makeUserPermalink("@bob:example.org")}">Bob</a>`;
+
+            await sendMessage(`${self} and ${bob} `, true, {
+                roomContext: defaultRoomContext,
+                mxClient: mockClient,
+                urlPreviewSnapshot: { entries: [], content: "", contentLinks: new Set<string>(), isModified: false },
+            });
+
+            expect(mockClient.sendMessage).toHaveBeenCalledWith(
+                "myfakeroom",
+                null,
+                expect.objectContaining({ "m.mentions": { user_ids: ["@bob:example.org"] } }),
+            );
         });
 
         it("Should scroll to bottom after sending a html message", async () => {
@@ -531,11 +551,13 @@ describe("message", () => {
             const expectedContent = {
                 "body": `* ${newMessage}`,
                 "formatted_body": `* ${newMessage}`,
+                "m.mentions": {},
                 "m.new_content": {
-                    body: "Replying to this new content",
-                    format: "org.matrix.custom.html",
-                    formatted_body: "Replying to this new content",
-                    msgtype: "m.text",
+                    "body": "Replying to this new content",
+                    "format": "org.matrix.custom.html",
+                    "formatted_body": "Replying to this new content",
+                    "msgtype": "m.text",
+                    "m.mentions": {},
                 },
                 "m.relates_to": {
                     event_id: mockEvent.getId(),
@@ -645,6 +667,87 @@ describe("message", () => {
             });
 
             expect(mockClient.sendMessage).toHaveBeenCalledTimes(1);
+        });
+
+        describe("of a reply", () => {
+            const getRoom = vi.mocked(mockClient.getRoom);
+            const getRoomImplementation = getRoom.getMockImplementation()!;
+
+            beforeEach(() => {
+                // The event the edited message replies to is in the room.
+                getRoom.mockImplementation((roomId) => (roomId === mockRoom.roomId ? mockRoom : null));
+            });
+
+            afterEach(() => {
+                getRoom.mockImplementation(getRoomImplementation);
+            });
+
+            it("Should mention the sender of the replied-to event", async () => {
+                const reply = mkEvent({
+                    type: "m.room.message",
+                    room: "myfakeroom",
+                    user: mockClient.getSafeUserId(),
+                    content: {
+                        "msgtype": "m.text",
+                        "body": "My reply",
+                        "m.relates_to": { "m.in_reply_to": { event_id: mockEvent.getId() } },
+                    },
+                    event: true,
+                });
+
+                await editMessage("My edited reply", {
+                    roomContext: defaultRoomContext,
+                    mxClient: mockClient,
+                    editorStateTransfer: new EditorStateTransfer(reply),
+                });
+
+                expect(mockClient.sendMessage).toHaveBeenCalledWith(
+                    reply.getRoomId(),
+                    null,
+                    expect.objectContaining({
+                        "m.mentions": { user_ids: [mockEvent.getSender()] },
+                        "m.new_content": expect.objectContaining({
+                            "m.mentions": { user_ids: [mockEvent.getSender()] },
+                        }),
+                    }),
+                );
+            });
+
+            // A thread message that is not a reply refers to the previous message in its thread only as a fallback
+            // for clients without threads.
+            it("Should not mention the sender of the previous message in a thread", async () => {
+                const threadMessage = mkEvent({
+                    type: "m.room.message",
+                    room: "myfakeroom",
+                    user: mockClient.getSafeUserId(),
+                    content: {
+                        "msgtype": "m.text",
+                        "body": "My thread message",
+                        "m.relates_to": {
+                            "rel_type": "m.thread",
+                            "event_id": "$threadRoot",
+                            "is_falling_back": true,
+                            "m.in_reply_to": { event_id: mockEvent.getId() },
+                        },
+                    },
+                    event: true,
+                });
+
+                await editMessage("My edited thread message", {
+                    roomContext: defaultRoomContext,
+                    mxClient: mockClient,
+                    editorStateTransfer: new EditorStateTransfer(threadMessage),
+                });
+
+                expect(mockClient.sendMessage).toHaveBeenCalledWith(
+                    threadMessage.getRoomId(),
+                    "$threadRoot",
+                    expect.objectContaining({
+                        "m.mentions": {},
+                        "m.new_content": expect.objectContaining({ "m.mentions": {} }),
+                    }),
+                );
+            });
         });
     });
 });
