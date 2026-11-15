@@ -253,6 +253,7 @@ export default class HelpUserSettingsTab extends React.Component<IProps, IState>
         }
 
         const { appVersion, cryptoVersion } = this.getVersionInfo();
+        const sourceCodeUrl = SdkConfig.get().source_code_url;
 
         return (
             <SettingsTab>
@@ -269,6 +270,11 @@ export default class HelpUserSettingsTab extends React.Component<IProps, IState>
                             </CopyableText>
                             {updateButton}
                         </SettingsSubsectionText>
+                        {sourceCodeUrl && (
+                            <SettingsSubsectionText>
+                                <ExternalLink href={sourceCodeUrl}>{_t("setting|help_about|source_code")}</ExternalLink>
+                            </SettingsSubsectionText>
+                        )}
                     </SettingsSubsection>
                     {this.renderLegal()}
                     {this.renderCredits()}

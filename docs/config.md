@@ -168,6 +168,9 @@ complete re-branding/private labeling, a more personalised experience can be ach
 19. `help_encryption_url`: The URL to point users to for help with encryption, defaults to `https://element.io/help#encryption`.
 20. `help_key_storage_url`: The URL to point users to for help with key storage, defaults to `https://element.io/help#encryption5`.
 21. `force_verification`: If true, users must verify new logins (eg. with another device / their recovery key). Defaults to true.
+22. `source_code_url`: Optional URL of the source code of the deployed version, such as a tag or commit in a repository. When set,
+    Help & About links to it next to the version information. As the link is labelled as the source of this version, update the
+    URL whenever you deploy a new version.
 
 ### `desktop_builds` and `mobile_builds`
 
