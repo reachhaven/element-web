@@ -28,6 +28,8 @@ import { openLinkModal } from "./LinkModal";
 import { useComposerContext } from "../ComposerContext";
 import { KeyboardShortcut } from "../../../settings/KeyboardShortcut";
 import { type KeyCombo } from "../../../../../KeyBindingsManager";
+import { KeyBindingAction } from "../../../../../accessibility/KeyboardShortcuts";
+import { getKeyboardShortcutValue } from "../../../../../accessibility/KeyboardShortcutUtils";
 
 interface ButtonProps {
     icon: ReactNode;
@@ -147,6 +149,7 @@ export function FormattingButtons({ composer, actionStates, disabled }: Formatti
             <Button
                 actionState={disabled ? "disabled" : actionStates.codeBlock}
                 label={_t("composer|format_code_block")}
+                keyCombo={getKeyboardShortcutValue(KeyBindingAction.FormatCodeBlock)}
                 onClick={() => composer.codeBlock()}
                 icon={<CodeBlockIcon className="mx_FormattingButtons_Icon" />}
             />

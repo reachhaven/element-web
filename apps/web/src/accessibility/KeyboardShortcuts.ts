@@ -39,6 +39,8 @@ export enum KeyBindingAction {
     FormatLink = "KeyBinding.FormatLink",
     /** Set code format for current selection */
     FormatCode = "KeyBinding.FormatCode",
+    /** Format the current selection as a code block */
+    FormatCodeBlock = "KeyBinding.FormatCodeBlock",
     /** Format the current selection as quote */
     FormatQuote = "KeyBinding.toggleQuoteInComposer",
     /** Undo the last editing */
@@ -233,6 +235,7 @@ export const CATEGORIES: Record<CategoryName, ICategory> = {
             KeyBindingAction.FormatQuote,
             KeyBindingAction.FormatLink,
             KeyBindingAction.FormatCode,
+            KeyBindingAction.FormatCodeBlock,
             KeyBindingAction.EditUndo,
             KeyBindingAction.EditRedo,
             KeyBindingAction.MoveCursorToStart,
@@ -344,6 +347,9 @@ export const DESKTOP_SHORTCUTS = [
 
 export const MAC_ONLY_SHORTCUTS = [KeyBindingAction.OpenUserSettings];
 
+/** Shortcuts that only exist while the rich text editor (`feature_wysiwyg_composer`) is enabled */
+export const WYSIWYG_COMPOSER_SHORTCUTS = [KeyBindingAction.FormatCodeBlock];
+
 // This is very intentionally modelled after SETTINGS as it will make it easier
 // to implement customizable keyboard shortcuts
 // TODO: TravisR will fix this nightmare when the new version of the SettingsStore becomes a thing
@@ -375,6 +381,15 @@ export const KEYBOARD_SHORTCUTS: IKeyboardShortcuts = {
         default: {
             ctrlOrCmdKey: true,
             key: Key.E,
+        },
+        displayName: _td("keyboard|composer_toggle_code"),
+    },
+    [KeyBindingAction.FormatCodeBlock]: {
+        default: {
+            ctrlKey: true,
+            altKey: !IS_MAC,
+            shiftKey: IS_MAC,
+            key: Key.C,
         },
         displayName: _td("keyboard|composer_toggle_code_block"),
     },

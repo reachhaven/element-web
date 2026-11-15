@@ -1460,6 +1460,7 @@
         "composer_new_line": "New line",
         "composer_redo": "Redo edit",
         "composer_toggle_bold": "Toggle Bold",
+        "composer_toggle_code": "Toggle Code",
         "composer_toggle_code_block": "Toggle Code Block",
         "composer_toggle_italics": "Toggle Italics",
         "composer_toggle_link": "Toggle Link",

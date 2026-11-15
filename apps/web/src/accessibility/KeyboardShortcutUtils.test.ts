@@ -110,6 +110,40 @@ describe("KeyboardShortcutUtils", () => {
         });
     });
 
+    describe("the code block shortcut", () => {
+        beforeEach(() => {
+            vi.doUnmock(PATH_TO_KEYBOARD_SHORTCUTS);
+        });
+
+        const withRichTextEditor = async (enabled: boolean): Promise<void> => {
+            const SettingsStore = (await import("../settings/SettingsStore")).default;
+            vi.spyOn(SettingsStore, "getValue").mockImplementation(((name: string) =>
+                name === "feature_wysiwyg_composer" ? enabled : false) as typeof SettingsStore.getValue);
+        };
+
+        it("is bound and listed while the rich text editor is enabled", async () => {
+            await withRichTextEditor(true);
+            const { KeyBindingAction } = await getFile();
+            const utils = await getUtils();
+            const { defaultBindingsProvider } = await import("../KeyBindingsDefaults");
+
+            const bound = defaultBindingsProvider.getMessageComposerBindings!().map((binding) => binding.action);
+            expect(bound).toContain(KeyBindingAction.FormatCodeBlock);
+            expect(utils.getKeyboardShortcutValue(KeyBindingAction.FormatCodeBlock)).toBeDefined();
+        });
+
+        it("is neither bound nor listed for the plain composer", async () => {
+            await withRichTextEditor(false);
+            const { KeyBindingAction } = await getFile();
+            const utils = await getUtils();
+            const { defaultBindingsProvider } = await import("../KeyBindingsDefaults");
+
+            const bound = defaultBindingsProvider.getMessageComposerBindings!().map((binding) => binding.action);
+            expect(bound).not.toContain(KeyBindingAction.FormatCodeBlock);
+            expect(utils.getKeyboardShortcutValue(KeyBindingAction.FormatCodeBlock)).toBeUndefined();
+        });
+    });
+
     describe("correctly filters shortcuts", () => {
         it("when on web and not on macOS", async () => {
             mockKeyboardShortcuts({

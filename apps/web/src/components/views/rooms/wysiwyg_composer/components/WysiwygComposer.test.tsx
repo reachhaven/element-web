@@ -554,6 +554,65 @@ describe("WysiwygComposer", () => {
         });
     });
 
+    describe("Code block shortcut", () => {
+        const onChange = vi.fn();
+        beforeEach(async () => {
+            vi.spyOn(SettingsStore, "getValue").mockImplementation((name: string): any => {
+                if (name === "feature_wysiwyg_composer") return true;
+            });
+            customRender(onChange);
+            await waitFor(() => expect(screen.getByRole("textbox")).toHaveAttribute("contentEditable", "true"));
+            fireEvent.input(screen.getByRole("textbox"), {
+                data: "foo",
+                inputType: "insertText",
+            });
+        });
+
+        afterEach(() => {
+            onChange.mockReset();
+        });
+
+        it("Should format the content as a code block when Ctrl+Alt+C is pressed", async () => {
+            // When
+            const notCancelled = fireEvent.keyDown(screen.getByRole("textbox"), {
+                key: "c",
+                ctrlKey: true,
+                altKey: true,
+            });
+
+            // Then
+            expect(notCancelled).toBe(false);
+            await waitFor(() => expect(onChange).toHaveBeenLastCalledWith("<pre><code>foo</code></pre>"));
+        });
+
+        it("Should remove the code block when Ctrl+Alt+C is pressed again", async () => {
+            // When
+            const textbox = screen.getByRole("textbox");
+            fireEvent.keyDown(textbox, { key: "c", ctrlKey: true, altKey: true });
+            await waitFor(() => expect(onChange).toHaveBeenLastCalledWith("<pre><code>foo</code></pre>"));
+            fireEvent.keyDown(textbox, { key: "c", ctrlKey: true, altKey: true });
+
+            // Then
+            await waitFor(() => expect(onChange).toHaveBeenLastCalledWith("foo"));
+        });
+
+        it("Should leave a character typed with AltGr+C alone", async () => {
+            // When
+            const notCancelled = fireEvent.keyDown(screen.getByRole("textbox"), {
+                key: "ć",
+                ctrlKey: true,
+                altKey: true,
+            });
+            await act(async () => {
+                await flushPromises();
+            });
+
+            // Then
+            expect(notCancelled).toBe(true);
+            expect(onChange).not.toHaveBeenCalledWith(expect.stringContaining("<pre>"));
+        });
+    });
+
     describe("Keyboard navigation", () => {
         const { mockClient, defaultRoomContext, mockEvent, editorStateTransfer } = createMocks();
 
