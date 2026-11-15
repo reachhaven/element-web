@@ -1,0 +1,1113 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GifPickerView > Storybook snapshots > renders a failure to load 1`] = `
+<div>
+  <section
+    aria-label="GIF picker"
+    class="Flex-module_flex GifPickerView-module_picker"
+    style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: 0; --mx-flex-wrap: nowrap;"
+  >
+    <div
+      class="Flex-module_flex GifPickerView-module_header"
+      style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
+    >
+      <form
+        class="_root_1o4d9_17"
+      >
+        <label
+          class="_label_1o4d9_60 _field_1o4d9_27 _search_1lktl_8 GifPickerView-module_search mx_no_textinput"
+          for="react-use-id-1"
+        >
+          <svg
+            class="_icon_1lktl_37"
+            fill="currentColor"
+            height="20"
+            viewBox="0 0 24 24"
+            width="20"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15.05 16.463a7.5 7.5 0 1 1 1.414-1.414l3.243 3.244a1 1 0 0 1-1.414 1.414zM16 10.5a5.5 5.5 0 1 0-11 0 5.5 5.5 0 0 0 11 0"
+            />
+          </svg>
+          <input
+            aria-label="Search GIFs"
+            class="_input_1lktl_52"
+            id="react-use-id-1"
+            maxlength="50"
+            name="gif_search"
+            placeholder="Search GIPHY"
+            tabindex="0"
+            type="search"
+            value=""
+          />
+        </label>
+      </form>
+      <div
+        aria-label="Categories"
+        class="Flex-module_flex GifPickerView-module_categories"
+        role="listbox"
+        style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: start; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: wrap;"
+      >
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Celebrate
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Love
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Thumbs up
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Surprised
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Excited
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Sad
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Angry
+        </button>
+      </div>
+    </div>
+    <div
+      class="AutoHideScrollbar-module_scrollbar GifPickerView-module_body"
+      tabindex="-1"
+    >
+      <section
+        aria-busy="false"
+        aria-labelledby="react-use-id-2"
+      >
+        <h3
+          class="_typography_6v6n8_153 _font-body-sm-semibold_6v6n8_36 GifPickerView-module_heading"
+          id="react-use-id-2"
+        >
+          Trending
+        </h3>
+        <div
+          class="Flex-module_flex GifPickerView-module_status"
+          style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: center; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
+        >
+          <p
+            class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31"
+          >
+            Couldn't load GIFs.
+          </p>
+          <button
+            class="_button_1nw83_8"
+            data-kind="secondary"
+            data-size="md"
+            role="button"
+            tabindex="0"
+          >
+            Retry
+          </button>
+        </div>
+      </section>
+    </div>
+    <div
+      class="GifPickerView-module_visuallyHidden"
+      role="status"
+    >
+      Couldn't load GIFs.
+    </div>
+    <div
+      class="GifPickerView-module_attribution"
+    >
+      <img
+        alt="Powered by GIPHY"
+        class="GifPickerView-module_attributionMark"
+        src="/src/room/composer/GifPickerView/powered-by-giphy.svg"
+      />
+    </div>
+  </section>
+</div>
+`;
+
+exports[`GifPickerView > Storybook snapshots > renders loading 1`] = `
+<div>
+  <section
+    aria-label="GIF picker"
+    class="Flex-module_flex GifPickerView-module_picker"
+    style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: 0; --mx-flex-wrap: nowrap;"
+  >
+    <div
+      class="Flex-module_flex GifPickerView-module_header"
+      style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
+    >
+      <form
+        class="_root_1o4d9_17"
+      >
+        <label
+          class="_label_1o4d9_60 _field_1o4d9_27 _search_1lktl_8 GifPickerView-module_search mx_no_textinput"
+          for="react-use-id-1"
+        >
+          <svg
+            class="_icon_1lktl_37"
+            fill="currentColor"
+            height="20"
+            viewBox="0 0 24 24"
+            width="20"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15.05 16.463a7.5 7.5 0 1 1 1.414-1.414l3.243 3.244a1 1 0 0 1-1.414 1.414zM16 10.5a5.5 5.5 0 1 0-11 0 5.5 5.5 0 0 0 11 0"
+            />
+          </svg>
+          <input
+            aria-label="Search GIFs"
+            class="_input_1lktl_52"
+            id="react-use-id-1"
+            maxlength="50"
+            name="gif_search"
+            placeholder="Search GIPHY"
+            tabindex="0"
+            type="search"
+            value=""
+          />
+        </label>
+      </form>
+      <div
+        aria-label="Categories"
+        class="Flex-module_flex GifPickerView-module_categories"
+        role="listbox"
+        style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: start; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: wrap;"
+      >
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Celebrate
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Love
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Thumbs up
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Surprised
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Excited
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Sad
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Angry
+        </button>
+      </div>
+    </div>
+    <div
+      class="AutoHideScrollbar-module_scrollbar GifPickerView-module_body"
+      tabindex="-1"
+    >
+      <section
+        aria-busy="true"
+        aria-labelledby="react-use-id-2"
+      >
+        <h3
+          class="_typography_6v6n8_153 _font-body-sm-semibold_6v6n8_36 GifPickerView-module_heading"
+          id="react-use-id-2"
+        >
+          Trending
+        </h3>
+        <div
+          class="Flex-module_flex GifPickerView-module_status"
+          style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: center; --mx-flex-justify: start; --mx-flex-gap: 0; --mx-flex-wrap: nowrap;"
+        >
+          <svg
+            aria-label="Loading GIFs"
+            class="_icon_1855a_18"
+            fill="currentColor"
+            height="1em"
+            role="progressbar"
+            style="width: 20px; height: 20px;"
+            viewBox="0 0 24 24"
+            width="1em"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              clip-rule="evenodd"
+              d="M12 4.031a8 8 0 1 0 8 8 1 1 0 0 1 2 0c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10a1 1 0 1 1 0 2"
+              fill-rule="evenodd"
+            />
+          </svg>
+        </div>
+      </section>
+    </div>
+    <div
+      class="GifPickerView-module_visuallyHidden"
+      role="status"
+    >
+      Loading GIFs
+    </div>
+    <div
+      class="GifPickerView-module_attribution"
+    >
+      <img
+        alt="Powered by GIPHY"
+        class="GifPickerView-module_attributionMark"
+        src="/src/room/composer/GifPickerView/powered-by-giphy.svg"
+      />
+    </div>
+  </section>
+</div>
+`;
+
+exports[`GifPickerView > Storybook snapshots > renders no results 1`] = `
+<div>
+  <section
+    aria-label="GIF picker"
+    class="Flex-module_flex GifPickerView-module_picker"
+    style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: 0; --mx-flex-wrap: nowrap;"
+  >
+    <div
+      class="Flex-module_flex GifPickerView-module_header"
+      style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
+    >
+      <form
+        class="_root_1o4d9_17"
+      >
+        <label
+          class="_label_1o4d9_60 _field_1o4d9_27 _search_1lktl_8 GifPickerView-module_search mx_no_textinput"
+          for="react-use-id-1"
+        >
+          <svg
+            class="_icon_1lktl_37"
+            fill="currentColor"
+            height="20"
+            viewBox="0 0 24 24"
+            width="20"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15.05 16.463a7.5 7.5 0 1 1 1.414-1.414l3.243 3.244a1 1 0 0 1-1.414 1.414zM16 10.5a5.5 5.5 0 1 0-11 0 5.5 5.5 0 0 0 11 0"
+            />
+          </svg>
+          <input
+            aria-label="Search GIFs"
+            class="_input_1lktl_52"
+            id="react-use-id-1"
+            maxlength="50"
+            name="gif_search"
+            placeholder="Search GIPHY"
+            tabindex="0"
+            type="search"
+            value="zzzzzz"
+          />
+        </label>
+      </form>
+      <div
+        aria-label="Categories"
+        class="Flex-module_flex GifPickerView-module_categories"
+        role="listbox"
+        style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: start; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: wrap;"
+      >
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Celebrate
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Love
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Thumbs up
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Surprised
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Excited
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Sad
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Angry
+        </button>
+      </div>
+    </div>
+    <div
+      class="AutoHideScrollbar-module_scrollbar GifPickerView-module_body"
+      tabindex="-1"
+    >
+      <section
+        aria-busy="false"
+        aria-labelledby="react-use-id-2"
+      >
+        <h3
+          class="_typography_6v6n8_153 _font-body-sm-semibold_6v6n8_36 GifPickerView-module_heading"
+          id="react-use-id-2"
+        >
+          Results
+        </h3>
+        <div
+          class="Flex-module_flex GifPickerView-module_status"
+          style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: center; --mx-flex-justify: start; --mx-flex-gap: 0; --mx-flex-wrap: nowrap;"
+        >
+          <p
+            class="_typography_6v6n8_153 _font-body-sm-regular_6v6n8_31"
+          >
+            No GIFs found.
+          </p>
+        </div>
+      </section>
+    </div>
+    <div
+      class="GifPickerView-module_visuallyHidden"
+      role="status"
+    >
+      No GIFs found.
+    </div>
+    <div
+      class="GifPickerView-module_attribution"
+    >
+      <img
+        alt="Powered by GIPHY"
+        class="GifPickerView-module_attributionMark"
+        src="/src/room/composer/GifPickerView/powered-by-giphy.svg"
+      />
+    </div>
+  </section>
+</div>
+`;
+
+exports[`GifPickerView > Storybook snapshots > renders the recent GIFs 1`] = `
+<div>
+  <section
+    aria-label="GIF picker"
+    class="Flex-module_flex GifPickerView-module_picker"
+    style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: 0; --mx-flex-wrap: nowrap;"
+  >
+    <div
+      class="Flex-module_flex GifPickerView-module_header"
+      style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
+    >
+      <form
+        class="_root_1o4d9_17"
+      >
+        <label
+          class="_label_1o4d9_60 _field_1o4d9_27 _search_1lktl_8 GifPickerView-module_search mx_no_textinput"
+          for="react-use-id-1"
+        >
+          <svg
+            class="_icon_1lktl_37"
+            fill="currentColor"
+            height="20"
+            viewBox="0 0 24 24"
+            width="20"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15.05 16.463a7.5 7.5 0 1 1 1.414-1.414l3.243 3.244a1 1 0 0 1-1.414 1.414zM16 10.5a5.5 5.5 0 1 0-11 0 5.5 5.5 0 0 0 11 0"
+            />
+          </svg>
+          <input
+            aria-label="Search GIFs"
+            class="_input_1lktl_52"
+            id="react-use-id-1"
+            maxlength="50"
+            name="gif_search"
+            placeholder="Search GIPHY"
+            tabindex="0"
+            type="search"
+            value=""
+          />
+        </label>
+      </form>
+      <div
+        aria-label="Categories"
+        class="Flex-module_flex GifPickerView-module_categories"
+        role="listbox"
+        style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: start; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: wrap;"
+      >
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Celebrate
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Love
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Thumbs up
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Surprised
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Excited
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Sad
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Angry
+        </button>
+      </div>
+    </div>
+    <div
+      class="AutoHideScrollbar-module_scrollbar GifPickerView-module_body"
+      tabindex="-1"
+    >
+      <section
+        aria-labelledby="react-use-id-2"
+      >
+        <h3
+          class="_typography_6v6n8_153 _font-body-sm-semibold_6v6n8_36 GifPickerView-module_heading"
+          id="react-use-id-2"
+        >
+          Recent
+        </h3>
+        <div
+          class="Flex-module_flex GifPickerView-module_recent"
+          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: start; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+        >
+          <button
+            aria-label="Recent 0"
+            class="GifPickerView-module_tile"
+            style="aspect-ratio: 220 / 275;"
+            tabindex="0"
+            type="button"
+          >
+            <img
+              alt=""
+              decoding="async"
+              loading="lazy"
+              src="/static/tallImage.png"
+            />
+          </button>
+          <button
+            aria-label="Recent 1"
+            class="GifPickerView-module_tile"
+            style="aspect-ratio: 500 / 333;"
+            tabindex="-1"
+            type="button"
+          >
+            <img
+              alt=""
+              decoding="async"
+              loading="lazy"
+              src="/static/wideImage.png"
+            />
+          </button>
+          <button
+            aria-label="Recent 2"
+            class="GifPickerView-module_tile"
+            style="aspect-ratio: 320 / 320;"
+            tabindex="-1"
+            type="button"
+          >
+            <img
+              alt=""
+              decoding="async"
+              loading="lazy"
+              src="/static/image-body/install-spinner.png"
+            />
+          </button>
+          <button
+            aria-label="Recent 3"
+            class="GifPickerView-module_tile"
+            style="aspect-ratio: 220 / 275;"
+            tabindex="-1"
+            type="button"
+          >
+            <img
+              alt=""
+              decoding="async"
+              loading="lazy"
+              src="/static/tallImage.png"
+            />
+          </button>
+          <button
+            aria-label="Recent 4"
+            class="GifPickerView-module_tile"
+            style="aspect-ratio: 500 / 333;"
+            tabindex="-1"
+            type="button"
+          >
+            <img
+              alt=""
+              decoding="async"
+              loading="lazy"
+              src="/static/wideImage.png"
+            />
+          </button>
+        </div>
+      </section>
+      <section
+        aria-busy="false"
+        aria-labelledby="react-use-id-3"
+      >
+        <h3
+          class="_typography_6v6n8_153 _font-body-sm-semibold_6v6n8_36 GifPickerView-module_heading"
+          id="react-use-id-3"
+        >
+          Trending
+        </h3>
+        <div
+          class="Flex-module_flex"
+          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: start; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+        >
+          <div
+            class="Flex-module_flex GifPickerView-module_column"
+            style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+          >
+            <button
+              aria-label="Trending 0"
+              class="GifPickerView-module_tile"
+              data-column="0"
+              style="aspect-ratio: 220 / 275;"
+              tabindex="0"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/tallImage.png"
+              />
+            </button>
+            <button
+              aria-label="Trending 3"
+              class="GifPickerView-module_tile"
+              data-column="0"
+              style="aspect-ratio: 220 / 275;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/tallImage.png"
+              />
+            </button>
+            <button
+              aria-label="Trending 6"
+              class="GifPickerView-module_tile"
+              data-column="0"
+              style="aspect-ratio: 220 / 275;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/tallImage.png"
+              />
+            </button>
+          </div>
+          <div
+            class="Flex-module_flex GifPickerView-module_column"
+            style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+          >
+            <button
+              aria-label="Trending 1"
+              class="GifPickerView-module_tile"
+              data-column="1"
+              style="aspect-ratio: 500 / 333;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/wideImage.png"
+              />
+            </button>
+            <button
+              aria-label="Trending 2"
+              class="GifPickerView-module_tile"
+              data-column="1"
+              style="aspect-ratio: 320 / 320;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/image-body/install-spinner.png"
+              />
+            </button>
+            <button
+              aria-label="Trending 4"
+              class="GifPickerView-module_tile"
+              data-column="1"
+              style="aspect-ratio: 500 / 333;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/wideImage.png"
+              />
+            </button>
+            <button
+              aria-label="Trending 5"
+              class="GifPickerView-module_tile"
+              data-column="1"
+              style="aspect-ratio: 320 / 320;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/image-body/install-spinner.png"
+              />
+            </button>
+            <button
+              aria-label="Trending 7"
+              class="GifPickerView-module_tile"
+              data-column="1"
+              style="aspect-ratio: 500 / 333;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/wideImage.png"
+              />
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div
+      class="GifPickerView-module_visuallyHidden"
+      role="status"
+    />
+    <div
+      class="GifPickerView-module_attribution"
+    >
+      <img
+        alt="Powered by GIPHY"
+        class="GifPickerView-module_attributionMark"
+        src="/src/room/composer/GifPickerView/powered-by-giphy.svg"
+      />
+    </div>
+  </section>
+</div>
+`;
+
+exports[`GifPickerView > Storybook snapshots > renders the trending GIFs 1`] = `
+<div>
+  <section
+    aria-label="GIF picker"
+    class="Flex-module_flex GifPickerView-module_picker"
+    style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: 0; --mx-flex-wrap: nowrap;"
+  >
+    <div
+      class="Flex-module_flex GifPickerView-module_header"
+      style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: nowrap;"
+    >
+      <form
+        class="_root_1o4d9_17"
+      >
+        <label
+          class="_label_1o4d9_60 _field_1o4d9_27 _search_1lktl_8 GifPickerView-module_search mx_no_textinput"
+          for="react-use-id-1"
+        >
+          <svg
+            class="_icon_1lktl_37"
+            fill="currentColor"
+            height="20"
+            viewBox="0 0 24 24"
+            width="20"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15.05 16.463a7.5 7.5 0 1 1 1.414-1.414l3.243 3.244a1 1 0 0 1-1.414 1.414zM16 10.5a5.5 5.5 0 1 0-11 0 5.5 5.5 0 0 0 11 0"
+            />
+          </svg>
+          <input
+            aria-label="Search GIFs"
+            class="_input_1lktl_52"
+            id="react-use-id-1"
+            maxlength="50"
+            name="gif_search"
+            placeholder="Search GIPHY"
+            tabindex="0"
+            type="search"
+            value=""
+          />
+        </label>
+      </form>
+      <div
+        aria-label="Categories"
+        class="Flex-module_flex GifPickerView-module_categories"
+        role="listbox"
+        style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: start; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-2x); --mx-flex-wrap: wrap;"
+      >
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Celebrate
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Love
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Thumbs up
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Surprised
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Excited
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Sad
+        </button>
+        <button
+          aria-selected="false"
+          class="_chat-filter_5qdp0_8"
+          role="option"
+          tabindex="0"
+        >
+          Angry
+        </button>
+      </div>
+    </div>
+    <div
+      class="AutoHideScrollbar-module_scrollbar GifPickerView-module_body"
+      tabindex="-1"
+    >
+      <section
+        aria-busy="false"
+        aria-labelledby="react-use-id-2"
+      >
+        <h3
+          class="_typography_6v6n8_153 _font-body-sm-semibold_6v6n8_36 GifPickerView-module_heading"
+          id="react-use-id-2"
+        >
+          Trending
+        </h3>
+        <div
+          class="Flex-module_flex"
+          style="--mx-flex-display: flex; --mx-flex-direction: row; --mx-flex-align: start; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+        >
+          <div
+            class="Flex-module_flex GifPickerView-module_column"
+            style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+          >
+            <button
+              aria-label="Trending 0"
+              class="GifPickerView-module_tile"
+              data-column="0"
+              style="aspect-ratio: 220 / 275;"
+              tabindex="0"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/tallImage.png"
+              />
+            </button>
+            <button
+              aria-label="Trending 3"
+              class="GifPickerView-module_tile"
+              data-column="0"
+              style="aspect-ratio: 220 / 275;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/tallImage.png"
+              />
+            </button>
+            <button
+              aria-label="Trending 6"
+              class="GifPickerView-module_tile"
+              data-column="0"
+              style="aspect-ratio: 220 / 275;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/tallImage.png"
+              />
+            </button>
+          </div>
+          <div
+            class="Flex-module_flex GifPickerView-module_column"
+            style="--mx-flex-display: flex; --mx-flex-direction: column; --mx-flex-align: stretch; --mx-flex-justify: start; --mx-flex-gap: var(--cpd-space-1x); --mx-flex-wrap: nowrap;"
+          >
+            <button
+              aria-label="Trending 1"
+              class="GifPickerView-module_tile"
+              data-column="1"
+              style="aspect-ratio: 500 / 333;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/wideImage.png"
+              />
+            </button>
+            <button
+              aria-label="Trending 2"
+              class="GifPickerView-module_tile"
+              data-column="1"
+              style="aspect-ratio: 320 / 320;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/image-body/install-spinner.png"
+              />
+            </button>
+            <button
+              aria-label="Trending 4"
+              class="GifPickerView-module_tile"
+              data-column="1"
+              style="aspect-ratio: 500 / 333;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/wideImage.png"
+              />
+            </button>
+            <button
+              aria-label="Trending 5"
+              class="GifPickerView-module_tile"
+              data-column="1"
+              style="aspect-ratio: 320 / 320;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/image-body/install-spinner.png"
+              />
+            </button>
+            <button
+              aria-label="Trending 7"
+              class="GifPickerView-module_tile"
+              data-column="1"
+              style="aspect-ratio: 500 / 333;"
+              tabindex="-1"
+              type="button"
+            >
+              <img
+                alt=""
+                decoding="async"
+                loading="lazy"
+                src="/static/wideImage.png"
+              />
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div
+      class="GifPickerView-module_visuallyHidden"
+      role="status"
+    />
+    <div
+      class="GifPickerView-module_attribution"
+    >
+      <img
+        alt="Powered by GIPHY"
+        class="GifPickerView-module_attributionMark"
+        src="/src/room/composer/GifPickerView/powered-by-giphy.svg"
+      />
+    </div>
+  </section>
+</div>
+`;

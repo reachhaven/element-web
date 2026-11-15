@@ -469,6 +469,49 @@ For widgets in general (from an integration manager or not) there is also:
 
 This controls the height that the top widget panel initially appears as and is the height in pixels, default 280.
 
+## GIF search
+
+The message composer can offer a GIF picker backed by [GIPHY](https://developers.giphy.com/docs/api/) or
+[KLIPY](https://docs.klipy.com/). The picker is only shown when `gif_provider` is set:
+
+```json
+{
+    "gif_provider": {
+        "provider": "giphy",
+        "base_url": "https://api.giphy.com",
+        "api_key": "YOUR_KEY_GOES_HERE"
+    }
+}
+```
+
+1. `provider`: `giphy` or `klipy`.
+2. `base_url`: The root URL of the provider's API (`https://api.giphy.com` or `https://api.klipy.com`), or of a proxy in
+   front of it. A path such as `/gifs` points at a proxy on the same origin as Element: it is resolved against the
+   origin Element is served from, not against the path of the page, so it only works where Element is served over
+   http(s), and not in Element Desktop. The URL may not have a query, a fragment or credentials. Search and trending
+   requests go only to this URL: `<base_url>/v1/gifs/search` and
+   `<base_url>/v1/gifs/trending` for GIPHY, `<base_url>/api/v1/<api_key>/gifs/search` and
+   `<base_url>/api/v1/<api_key>/gifs/trending` for KLIPY.
+3. `api_key`: Optional. The key issued by the provider. Leave it out when `base_url` is a proxy that adds the key. The
+   requests then carry no key, and KLIPY requests go to `<base_url>/api/v1/gifs/search` and
+   `<base_url>/api/v1/gifs/trending`.
+
+Previews load from the media URLs in the API's answers, and the chosen GIF is downloaded from there too, so clients
+contact the provider's media hosts directly unless a proxy also rewrites those URLs. The media URLs must be absolute
+http(s) URLs; results with other URLs are left out. Element uploads the chosen GIF to the homeserver's media repository,
+encrypted in encrypted rooms, so the message itself carries no provider URL. Previews play while hovered or focused, or
+all the time when the "Autoplay GIFs" setting is on. GIPHY results are requested with the `pg-13` rating; content
+filtering for KLIPY is set in the KLIPY partner panel.
+
+The picker credits the provider the way its terms ask. For GIPHY it shows GIPHY's "Powered By GIPHY" mark, drawn from
+the official attribution marks at <https://media.giphy.com/giphy-attribution-marks.zip>: the
+[GIPHY API Terms of Service](https://support.giphy.com/hc/en-us/articles/360028134111) ask apps to show "Powered by
+GIPHY" with the GIPHY logo, and the [GIPHY Brand Guidelines](https://support.giphy.com/hc/en-us/articles/360022283772)
+do not allow the logo to be changed. For KLIPY it shows a "Powered by KLIPY" line and uses "Search KLIPY" as the
+placeholder of the search field, as the [KLIPY attribution guidelines](https://docs.klipy.com/attribution) ask. Both
+providers' standard terms restrict proxying their API and storing copies of their media, so check that your agreement
+with the provider covers both.
+
 ## Administrative options
 
 If you would like to include a custom message when someone is reporting an event, set the following Markdown-capable field:

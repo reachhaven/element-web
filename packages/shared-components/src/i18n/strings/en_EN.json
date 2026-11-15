@@ -47,6 +47,29 @@
         "state_encryption_enabled": "Experimental state encryption enabled"
     },
     "composer": {
+        "gif_picker": {
+            "attribution": "Powered by %(provider)s",
+            "categories": "Categories",
+            "category_angry": "Angry",
+            "category_celebrate": "Celebrate",
+            "category_excited": "Excited",
+            "category_love": "Love",
+            "category_sad": "Sad",
+            "category_surprised": "Surprised",
+            "category_thumbs_up": "Thumbs up",
+            "error_loading": "Couldn't load GIFs.",
+            "error_loading_more": "Couldn't load more GIFs.",
+            "error_sending": "Couldn't send that GIF. Try again.",
+            "label": "GIF picker",
+            "loading": "Loading GIFs",
+            "no_results": "No GIFs found.",
+            "recent": "Recent",
+            "results": "Results",
+            "search_label": "Search GIFs",
+            "search_placeholder": "Search %(provider)s",
+            "trending": "Trending",
+            "untitled": "GIF"
+        },
         "url_preview": {
             "clear_all": "Clear all",
             "collapse": "Collapse URL previews",

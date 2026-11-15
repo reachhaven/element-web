@@ -1,0 +1,129 @@
+/*
+SPDX-FileCopyrightText: 2026 vDL Digital Ventures
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+Please see LICENSE files in the repository root for full details.
+*/
+
+.picker {
+    width: 360px;
+    height: min(500px, 80vh);
+}
+
+.header {
+    padding: var(--cpd-space-3x) var(--cpd-space-3x) var(--cpd-space-1x);
+}
+
+.search {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.categories {
+    white-space: nowrap;
+}
+
+.body {
+    flex: 1;
+    padding: 0 var(--cpd-space-3x) var(--cpd-space-3x);
+}
+
+.heading {
+    margin: var(--cpd-space-2x) 0;
+    color: var(--cpd-color-text-secondary);
+}
+
+.recent {
+    overflow-x: auto;
+    /*
+     * Room for the focus outline of the tiles, which the scrolling row would clip. The negative margin keeps the
+     * tiles in line with the heading and the grid.
+     */
+    padding: var(--cpd-space-1x);
+    margin-inline-start: calc(-1 * var(--cpd-space-1x));
+}
+
+.recent .tile {
+    flex: none;
+    width: auto;
+    height: 72px;
+}
+
+.column {
+    flex: 1;
+    min-width: 0;
+}
+
+.tile {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--cpd-color-bg-subtle-secondary);
+    cursor: pointer;
+}
+
+.tile:focus-visible {
+    outline: 2px solid var(--cpd-color-border-focused);
+    outline-offset: 1px;
+}
+
+.tile img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.tileSending img {
+    opacity: 0.5;
+}
+
+.tileSpinner {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    padding: var(--cpd-space-1x);
+    border-radius: 50%;
+    background-color: var(--cpd-color-bg-canvas-default);
+}
+
+.status {
+    padding: var(--cpd-space-6x) var(--cpd-space-3x);
+    color: var(--cpd-color-text-secondary);
+    text-align: center;
+}
+
+.sentinel {
+    height: 1px;
+}
+
+.visuallyHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.sendError {
+    padding: var(--cpd-space-2x) var(--cpd-space-3x) 0;
+    color: var(--cpd-color-text-critical-primary);
+}
+
+.attribution {
+    padding: var(--cpd-space-2x) var(--cpd-space-3x);
+    border-top: var(--cpd-border-width-1) solid var(--cpd-color-separator-primary);
+    color: var(--cpd-color-text-secondary);
+    text-align: end;
+}
+
+/* Close to the 42px height of GIPHY's small attribution marks, which it makes for phone screens */
+.attributionMark {
+    display: block;
+    height: var(--cpd-space-9x);
+    margin-inline-start: auto;
+}
