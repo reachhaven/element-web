@@ -32,11 +32,8 @@ import { mediaFromMxc } from "../customisations/Media";
 import { type EncryptedFile, type MediaEventContent, type ReplacementEvent } from "matrix-js-sdk/src/types";
 
 /**
- * Build the mentions information based on the editor model (and any related events):
- *
- * 1. Search the model parts for room or user pills and fill in the mentions object.
- * 2. If this is a reply to another event, include any user mentions from that
- *    (but do not include a room mention).
+ * Build the mentions information based on the editor model (and any related events), by finding the users and
+ * the room that the pills in the model mention and passing them to {@link attachMessageMentions}.
  *
  * @param sender - The Matrix ID of the user sending the event.
  * @param content - The event content.
@@ -48,6 +45,29 @@ export function attachMentions(
     sender: string,
     content: IContent,
     model: EditorModel | null,
+    replyToEvent: MatrixEvent | undefined,
+    editedContent: IContent | null = null,
+): void {
+    attachMessageMentions(sender, content, model ? mentionsInModel(model) : null, replyToEvent, editedContent);
+}
+
+/**
+ * Build the mentions information based on the mentions in the message (and any related events):
+ *
+ * 1. Fill in the mentions object with the users and the room mentioned in the message.
+ * 2. If this is a reply to another event, include the sender of that event
+ *    (but not the users or the room that event mentions).
+ *
+ * @param sender - The Matrix ID of the user sending the event.
+ * @param content - The event content.
+ * @param messageMentions - The users and the room the message mentions, null if there is no message, as for an upload.
+ * @param replyToEvent - The event being replied to or undefined if it is not a reply.
+ * @param editedContent - The content of the parent event being edited.
+ */
+export function attachMessageMentions(
+    sender: string,
+    content: IContent,
+    messageMentions: IMentions | null,
     replyToEvent: MatrixEvent | undefined,
     editedContent: IContent | null = null,
 ): void {
@@ -66,16 +86,10 @@ export function attachMentions(
         userMentions.add(replyToEvent.sender!.userId);
     }
 
-    // If user provided content is available, check to see if any users are mentioned.
-    if (model) {
-        // Add any mentioned users in the current content.
-        for (const part of model.parts) {
-            if (part.type === Type.UserPill) {
-                userMentions.add(part.resourceId);
-            } else if (part.type === Type.AtRoomPill) {
-                roomMention = true;
-            }
-        }
+    // If user provided content is available, add the users and the room it mentions.
+    if (messageMentions) {
+        messageMentions.user_ids?.forEach((userId) => userMentions.add(userId));
+        roomMention = !!messageMentions.room;
     }
 
     // Ensure the *current* user isn't listed in the mentioned users.
@@ -117,6 +131,25 @@ export function attachMentions(
     if (roomMention) {
         mentions.room = true;
     }
+}
+
+/**
+ * Find the users and the room that the pills in an editor model mention.
+ *
+ * @param model - The editor model to search for mentions.
+ * @returns The mentioned users, in the order they first appear, and whether the room is mentioned.
+ */
+function mentionsInModel(model: EditorModel): IMentions {
+    const userIds = new Set<string>();
+    let room = false;
+    for (const part of model.parts) {
+        if (part.type === Type.UserPill) {
+            userIds.add(part.resourceId);
+        } else if (part.type === Type.AtRoomPill) {
+            room = true;
+        }
+    }
+    return { user_ids: [...userIds], room };
 }
 
 // Merges favouring the given relation

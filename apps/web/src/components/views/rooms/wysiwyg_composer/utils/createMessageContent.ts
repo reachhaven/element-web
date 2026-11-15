@@ -100,8 +100,6 @@ export async function createMessageContent(
 
     const newRelation = isEditing ? { ...relation, rel_type: "m.replace", event_id: editedEvent.getId() } : relation;
 
-    // TODO Do we need to attach mentions here?
-    // TODO Handle editing?
     attachRelation(content, newRelation);
 
     if (!isEditing && replyToEvent) {
