@@ -38,6 +38,7 @@ test.skip(!settings.space, "the state file names no organisation, and a bot join
 test.describe.configure({ mode: "serial" });
 
 const prefix = bots?.localpartPrefix ?? "";
+const suffix = bots?.localpartSuffix ?? "";
 const consentType = bots?.consentEventType ?? "";
 const [personA, personB] = settings.people;
 const A = personA.displayName;
@@ -58,7 +59,7 @@ const both = (): Session[] => [a, b];
 const botOf = (userId: string): string => {
     const [, localpart, server] = matrixUserIdPattern.exec(userId) ?? [];
     if (!localpart || !server) throw new Error(`${userId} is not a Matrix user ID`);
-    return `@${prefix}${localpart}:${server}`;
+    return `@${prefix}${localpart}${suffix}:${server}`;
 };
 
 const botQuery = (): string => `@${bot.slice(1, bot.indexOf(":")).slice(0, prefix.length + 4)}`;

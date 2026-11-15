@@ -25,7 +25,7 @@ const text = z.string().trim().min(1);
 // https://spec.matrix.org/v1.16/appendices/#user-identifiers
 export const matrixUserIdPattern = /^@([^:]+):(.+)$/;
 const matrixUserId = z.string().regex(matrixUserIdPattern);
-const localpartPrefix = z.string().regex(/^[a-z0-9._=\-/+]+$/);
+const localpartChars = z.string().regex(/^[a-z0-9._=\-/+]+$/);
 
 const personSchema = z.looseObject({
     id: text,
@@ -51,7 +51,8 @@ const environmentSchema = z.object({
     E2E_BASE_URL: z.url({ protocol: /^https?$/ }).optional(),
     E2E_PAUSE_MS: z.coerce.number().int().nonnegative().default(800),
     E2E_TYPING_DELAY_MS: z.coerce.number().int().nonnegative().default(35),
-    E2E_BOT_LOCALPART_PREFIX: localpartPrefix.optional(),
+    E2E_BOT_LOCALPART_PREFIX: localpartChars.optional(),
+    E2E_BOT_LOCALPART_SUFFIX: localpartChars.optional(),
     E2E_BOT_CONSENT_EVENT_TYPE: text.optional(),
 });
 
@@ -109,7 +110,11 @@ const space = typeof organisation === "string" ? organisation : (organisation?.s
 const organisationName = typeof organisation === "object" ? organisation.name : undefined;
 const baseUrl = environment.E2E_BASE_URL ?? state?.baseUrl ?? state?.urls?.chat;
 if (!baseUrl || !URL.canParse(baseUrl)) throw new Error("Set E2E_BASE_URL, or baseUrl or urls.chat in E2E_STATE_FILE");
-const { E2E_BOT_LOCALPART_PREFIX: botPrefix, E2E_BOT_CONSENT_EVENT_TYPE: consentEventType } = environment;
+const {
+    E2E_BOT_LOCALPART_PREFIX: botPrefix,
+    E2E_BOT_LOCALPART_SUFFIX: botSuffix,
+    E2E_BOT_CONSENT_EVENT_TYPE: consentEventType,
+} = environment;
 
 export const settings = {
     baseUrl: baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`,
@@ -124,5 +129,8 @@ export const settings = {
     title: env("E2E_TITLE"),
     pauseMs: environment.E2E_PAUSE_MS,
     typing: { delay: environment.E2E_TYPING_DELAY_MS },
-    bots: botPrefix && consentEventType ? { localpartPrefix: botPrefix, consentEventType } : undefined,
+    bots:
+        botPrefix && consentEventType
+            ? { localpartPrefix: botPrefix, localpartSuffix: botSuffix ?? "", consentEventType }
+            : undefined,
 };
