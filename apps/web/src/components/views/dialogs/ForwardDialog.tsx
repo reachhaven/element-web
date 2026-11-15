@@ -59,7 +59,7 @@ import {
 import { getKeyBindingsManager } from "../../../KeyBindingsManager";
 import { KeyBindingAction } from "../../../accessibility/KeyboardShortcuts";
 import { OverflowTileView } from "../rooms/OverflowTileView";
-import { attachMentions } from "../../../utils/messages";
+import { attachMentions, mentionsInModel } from "../../../utils/messages";
 import { CommandPartCreator } from "../../../editor/parts";
 import SettingsStore from "../../../settings/SettingsStore";
 import { parseEvent } from "../../../editor/deserialize";
@@ -245,7 +245,7 @@ const transformEvent = (event: MatrixEvent, cli: MatrixClient): { type: string; 
     });
     const model = new EditorModel(parts, partCreator); // Temporary EditorModel to pass through
     const userId = cli.getSafeUserId();
-    attachMentions(userId, content, model, undefined);
+    attachMentions(userId, content, mentionsInModel(model), undefined);
 
     return { type, content };
 };

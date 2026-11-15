@@ -33,7 +33,7 @@ import { isContentModified } from "./isContentModified";
 import { CommandCategories, getCommand } from "../../../../../slash-commands/SlashCommands";
 import { runSlashCommand, shouldSendAnyway } from "../../../../../editor/commands";
 import { Action } from "../../../../../dispatcher/actions";
-import { addReplyToMessageContent } from "../../../../../utils/Reply";
+import { addReplyToMessageContent, shouldDisplayReply } from "../../../../../utils/Reply";
 import { attachRelation, attachUrlPreviews } from "../../../../../utils/messages";
 import { linksIn } from "../../../../../utils/UrlUtils";
 
@@ -114,7 +114,7 @@ export async function sendMessage(
     }
 
     // if content is null, we haven't done any slash command processing, so generate some content
-    content ??= await createMessageContent(message, isHTML, params);
+    content ??= await createMessageContent(mxClient.getSafeUserId(), message, isHTML, params);
     if (await attachUrlPreviews(mxClient, room, urlPreviewSnapshot, content, linksIn(message).size !== 0)) {
         return;
     }
@@ -216,7 +216,14 @@ export async function editMessage(
         const position = this.model.positionForOffset(caret.offset, caret.atNodeEnd);
         this.editorRef.current?.replaceEmoticon(position, REGEX_EMOTICON);
     }*/
-    const editContent = await createMessageContent(html, true, { editedEvent });
+
+    // Mention the sender of the event this message replies to, as when it was sent. A thread message that is not a
+    // reply still refers to the previous message in its thread, but only as a fallback for clients without threads.
+    const replyEventId = shouldDisplayReply(editedEvent) ? editedEvent.replyEventId : undefined;
+    const replyToEvent = replyEventId
+        ? mxClient.getRoom(editedEvent.getRoomId())?.findEventById(replyEventId)
+        : undefined;
+    const editContent = await createMessageContent(mxClient.getSafeUserId(), html, true, { editedEvent, replyToEvent });
     const newContent = editContent["m.new_content"]!;
 
     const shouldSend = true;
